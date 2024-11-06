@@ -1,0 +1,35 @@
+add_library(embeddingFunctor STATIC input_embedding.cu)
+set_property(TARGET embeddingFunctor PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET embeddingFunctor PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET embeddingFunctor PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+
+add_library(rmsnorm STATIC rmsnorm_kernel.cu)
+set_property(TARGET rmsnorm PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET rmsnorm PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET rmsnorm PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+
+add_library(cal_paddingoffset STATIC cal_paddingoffset.cu)
+set_property(TARGET cal_paddingoffset PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET cal_paddingoffset PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET cal_paddingoffset PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+
+add_library(build_casual_mask STATIC build_casual_mask.cu)
+set_property(TARGET build_casual_mask PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET build_casual_mask PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET build_casual_mask PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+
+add_library(cublas_utils STATIC cublas_utils.cc)
+set_property(TARGET cublas_utils PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET cublas_utils PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET cublas_utils PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+
+add_library(linear_lib STATIC linear.cu)
+set_property(TARGET linear_lib PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET linear_lib PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET linear_lib PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+target_link_libraries(linear_lib PUBLIC -lcudart -lcublas cublas_utils)
+
+add_library(qkv_bias_and_rope STATIC qkv_bias_and_RoPE.cu)
+set_property(TARGET qkv_bias_and_rope PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET qkv_bias_and_rope PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET qkv_bias_and_rope PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
