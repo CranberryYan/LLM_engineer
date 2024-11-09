@@ -262,20 +262,57 @@ __global__ void add_fusedQKV_bias_transpose_kernel(
     // }
 // }
 
+template <typename T>
+__global__ void rope_kernel_for_self_decoder(T *q, T *k, const int batch_szie, 
+    const int head_num, const int kv_head_num, const int head_size, const int step, 
+    int rotary_embedding_dim, float rotary_embedding_base) {
+    
+    int tid = threadIdx.x;
+    int q_head_id = blockIdx.x;
+    int q_batch_id = blockIdx.y;
+    int kv_head_id = q_head_id / (head_num / kv_head_num);
+    int kv_batch_id = q_batch_id;
+    int batch_stride = head_num * head_size;
+    int kv_batch_stride = kv_head_num * head_size;
+    int head_sride = head_size;
+    int q_offset = q_batch_id * batch_stride + q_head_id * head_sride + tid;
+    int k_offset = kv_batch_id * batch_stride + kv_head_id * head_sride + tid;
+
+    if (tid >= rotary_embedding_dim / 2) {
+        return;
+    }
+    float2 cos_sin = GetRoPEfreq(tid * 2, rotary_embedding_dim, rotary_embedding_base, step - 1);
+    float2 q_rotate = GetRoPEres(q[q_offset], q[q_offset + head_size / 2], cos_sin); // 返回 x[0] 和 x[64]
+    float2 k_rotate = GetRoPEres(k[k_offset], k[k_offset + head_size / 2], cos_sin); // 返回 x[0] 和 x[64]
+
+    q[q_offset] = q_rotate.x;
+    q[q_offset + head_size / 2] = q_rotate.y;
+    k[q_offset] = k_rotate.x;
+    k[k_offset + head_size / 2] = k_rotate.y;
+    }
+
+// TODO
+template <>
+__global__ void rope_kernel_for_self_decoder(half *q, half*k, 
+    const int batch_szie, const int head_num, const int kv_head_num, const int head_size, const int step, 
+    int rotary_embedding_dim, float rotary_embedding_base) {
+
+    }
+
 // input: [num tokens, qkv head_num, head size]
 // output: q: [bs, head num, max q len, head size]
 //       k/v: [bs, kv head num, max q len, head size]
 template <typename T>
 void launchAddFusedQKVBiasTransposeAndRoPE(
-        TensorWrapper<T> *q_buf,
-        TensorWrapper<T> *k_buf,
-        TensorWrapper<T> *v_buf,
-        TensorWrapper<T> *QKV,
-        BaseWeight<T> &qkv,
-        TensorWrapper<int> *padding_offset,
-        TensorWrapper<int> *history_length,
-        TensorWrapper<int> *input_length,
-        LLaMAAttentionStaticParams &params)
+    TensorWrapper<T> *q_buf,
+    TensorWrapper<T> *k_buf,
+    TensorWrapper<T> *v_buf,
+    TensorWrapper<T> *QKV,
+    BaseWeight<T> &qkv,
+    TensorWrapper<int> *padding_offset,
+    TensorWrapper<int> *history_length,
+    TensorWrapper<int> *input_length,
+    LLaMAAttentionStaticParams &params)
 {
     int token_num = QKV->shape[0];
     int qkv_head_num = QKV->shape[1];
@@ -298,12 +335,39 @@ void launchAddFusedQKVBiasTransposeAndRoPE(
 }
 
 template void launchAddFusedQKVBiasTransposeAndRoPE(
-            TensorWrapper<float> *q_buf, TensorWrapper<float> *k_buf, TensorWrapper<float> *v_buf,
-            TensorWrapper<float> *QKV, BaseWeight<float> &qkv,
-            TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
-            LLaMAAttentionStaticParams &params);
+    TensorWrapper<float> *q_buf, TensorWrapper<float> *k_buf, TensorWrapper<float> *v_buf,
+    TensorWrapper<float> *QKV, BaseWeight<float> &qkv,
+    TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
+    LLaMAAttentionStaticParams &params);
 // template void launchAddFusedQKVBiasTransposeAndRoPE(
 //             TensorWrapper<half> *q_buf, TensorWrapper<half> *k_buf, TensorWrapper<half> *v_buf,
 //             TensorWrapper<half> *QKV, BaseWeight<half> &qkv,
 //             TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
 //             LLaMAAttentionStaticParams &params);
+
+template<typename T>
+void launchRoPE(
+    TensorWrapper<T> *qkv_buf, 
+    TensorWrapper<int> *step, // 历史句子长度, 相当于const int time_step = cur_seq_history_len + local_token_id;
+    LLaMAAttentionStaticParams &static_params)
+{
+    int head_num = 32; // only for Llama2
+    const int batch_size = qkv_buf->shape[0];
+    const int qkv_head_num = qkv_buf->shape[1];
+    const int head_size = qkv_buf->shape[2];
+    const int cur_step = step->getVal();
+
+    T *qkv_data = qkv_buf->data;
+    T *q = qkv_data;
+    T *k = qkv_data + head_num * head_size;
+
+    int rotary_embedding_dim = static_params.rotary_embedding_dim;
+    float rotary_embedding_base = static_params.rotary_embedding_base;
+    int max_position_embeddnigs = static_params.max_position_embeddings;
+    
+    dim3 grid(head_num, batch_size);
+    dim3 block(head_size);
+    rope_kernel_for_self_decoder<T><<<grid, block>>>(
+        q, k, batch_size, head_num, head_size, cur_step, 
+        rotary_embedding_dim, rotary_embedding_base);
+}
