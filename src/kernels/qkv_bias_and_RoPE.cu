@@ -4,11 +4,11 @@
 // 2. padding, QKV splits to q k v and their shape is [bs, q head num(kv head num), max q len, head_size]
 // 3. rope and do attention
 // 4. write back to global memory
-// input:  QKV: [num tokens, qkv head num, head_size]
-//         qkv bias: [qkv head num, head size]
-// output: q: [bs, q head num, max q len, head size]
-//         k: [bs, kv head num, max q len, head size]
-//         v: [bs, kv head num, max q len, head size]
+// input:  QKV: [num_tokens, qkv_head_num, head_size]
+//         qkv bias: [qkv_head_num, head_size]
+// output: q: [bs, q_head_num, max_q_len, head_size]
+//         k: [bs, kv_head_num, max_q_len, head_size]
+//         v: [bs, kv_head_num, max q len, head_size]
 // repeat kv
 #include <math.h>
 #include <stdio.h>
