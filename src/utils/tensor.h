@@ -227,6 +227,7 @@ struct TensorMap
     // 增
     inline bool insert(const std::string& key, Tensor* value) {
         tensor_map_[key] = value;
+        return true;
     }
 
     inline void insert(std::pair<std::string, Tensor*> p) {

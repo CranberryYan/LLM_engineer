@@ -38,14 +38,14 @@ bool CheckResult(float* CPUoutput, float* GPUoutput, int output_size) {
 int main(int argc, char *argv[]) {
     const int seqlen = 16;
     const int hidden_units = 4096;
-    const int vocab_size = 32000;
-    const int inter_size = 10;
+    // const int vocab_size = 32000;
+    // const int inter_size = 10;
     int hidden_units_2 = 0;
     int output_size = 0;
 
     hidden_units_2 = hidden_units * hidden_units;
     output_size = seqlen * hidden_units;
-    // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
+    
     float* h_w;
     float* d_w;
     h_w = (float*)malloc(sizeof(float) * hidden_units_2);

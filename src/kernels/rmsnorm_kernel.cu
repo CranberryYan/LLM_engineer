@@ -65,16 +65,16 @@ __device__ T blockReduceSum(T val) {
 
 template<typename T>
 __global__ void RMSNorm(
-                    T* decoder_in,  // input & output: [num_tokens(bs), q_hidden_units]
-                    T* scale,       // intput: [q_hidden_units], RMSNorm weights
-                    float eps,      // RMSNorm: 防止0作被除数
-                    int num_tokens,
-                    int hidden_units) {
+    T* decoder_in,  // input & output: [num_tokens(bs), q_hidden_units]
+    T* scale,       // intput: [q_hidden_units], RMSNorm weights
+    float eps,      // RMSNorm: 防止0作被除数
+    int num_tokens,
+    int hidden_units) {
 }
 
 template<>
 __global__ void RMSNorm(float* decoder_in, float* scale,
-                    float eps, int num_tokens, int hidden_units)
+    float eps, int num_tokens, int hidden_units)
 {
     int vec_size = Vec<float>::size; // size: static, 无需将类实例化, 可以调用
     using Vec_t = typename Vec<float>::Type;
@@ -110,7 +110,7 @@ __global__ void RMSNorm(float* decoder_in, float* scale,
 
 template<>
 __global__ void RMSNorm(half* decoder_in, half* scale,
-                    float eps, int num_tokens, int hidden_units) 
+    float eps, int num_tokens, int hidden_units) 
 {
     int vec_size = Vec<half>::size; // size: static, 无需将类实例化, 可以调用
     using Vec_t = typename Vec<half>::Type;
@@ -142,7 +142,7 @@ __global__ void RMSNorm(half* decoder_in, half* scale,
 
 template<typename T>
 void launchRMSNorm(TensorWrapper<T>* decoder_in,
-        LayerNormWeight<T> &attn_norm_weight, float eps) {
+    LayerNormWeight<T> &attn_norm_weight, float eps) {
     int num_tokens = decoder_in->shape[0];
     int hidden_units = decoder_in->shape[1];
     int num_thread = std::min<int>(hidden_units / 4, 1024); // 向量化的读取, 一个thread负责4个数据, 最大为1024
@@ -153,8 +153,9 @@ void launchRMSNorm(TensorWrapper<T>* decoder_in,
     RMSNorm<T><<<grid, block>>>(decoder_in->data, attn_norm_weight.gamma, eps, num_tokens, hidden_units);
     std::cout << "called RMSNorm" << std::endl;
 }
+
 template void launchRMSNorm(TensorWrapper<float>* decoder_out,
-                LayerNormWeight<float> &attn_norm_weight, float eps);
+    LayerNormWeight<float> &attn_norm_weight, float eps);
 
 template void launchRMSNorm(TensorWrapper<half>* decoder_out,
-                LayerNormWeight<half> &attn_norm_weight, float eps);               
+    LayerNormWeight<half> &attn_norm_weight, float eps);               

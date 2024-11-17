@@ -141,11 +141,9 @@ __global__ void add_fusedQKV_bias_transpose_kernel(
     // 计算input -> 因此不使用padding_offset后的id
     int q_id = token_id * qkv_head_num * head_size + head_id * head_size + tid * vec_size;
     int k_id = token_id * qkv_head_num * head_size + head_id * head_size + tid * vec_size + head_num * head_size;
-    int v_id = token_id * qkv_head_num * head_size + head_id * head_size + tid * vec_size + head_num * head_size + kv_head_num *head_size;
 
     // RoPE
     const int cur_seq_history_len = history_length[batch_id];
-    const int context_length = cur_seq_history_len + input_length[batch_id];
     const int time_step = cur_seq_history_len + local_token_id;
     if (tid >= rotary_embedding_dim / 2) {
         return; // 22一组的RoPE, 只需要前64个thread

@@ -40,10 +40,10 @@ inline void llmAssert(bool result, const char* const file, int const line, std::
 
 // 检查 tensor 是在 host 还是 device
 # define LLM_CHECK(val) llmAssert(val, __FILE__, __LINE__)
-# define LLM_CHECK_WITH_INFO(val, info)                                                                              \
-    do {                                                                                                               \
-        bool is_valid_val = (val);                                                                                     \
-        if (!is_valid_val) {                                                                                           \
-            llmAssert(is_valid_val, __FILE__, __LINE__, (info));                                                    \
-        }                                                                                                              \
+# define LLM_CHECK_WITH_INFO(val, info)                                                                                 \
+    do {                                                                                                                \
+        bool is_valid_val = (val);                                                                                      \
+        if (!is_valid_val) {                                                                                            \
+            llmAssert(is_valid_val, __FILE__, __LINE__, (info));                                                        \
+        }                                                                                                               \
     } while (0)

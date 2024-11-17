@@ -77,4 +77,13 @@ target_link_libraries(
     test_fused_trans_remv_pad PUBLIC
     -lcudart
     -lcudadevrt
-    fused_transpose_and_remv_pad) 
+    fused_transpose_and_remv_pad)
+
+add_executable(test_fused_addresidual_norm
+    test_fused_addresidual_norm.cu
+)
+target_link_libraries(  
+    test_fused_addresidual_norm PUBLIC
+    -lcudart
+    -lcudadevrt
+    fused_addresidual_norm) 
