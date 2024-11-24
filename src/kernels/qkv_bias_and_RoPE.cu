@@ -146,7 +146,7 @@ __global__ void add_fusedQKV_bias_transpose_kernel(
     const int cur_seq_history_len = history_length[batch_id];
     const int time_step = cur_seq_history_len + local_token_id;
     if (tid >= rotary_embedding_dim / 2) {
-        return; // 22一组的RoPE, 只需要前64个thread
+        return; // 2 2一组的RoPE, 只需要前64个thread
     }
     float2 cos_sin = GetRoPEfreq(tid * 2, rotary_embedding_dim, rotary_embedding_base, time_step);
     float2 q_rotate = GetRoPEres(QKV[q_id], QKV[q_id + head_size / 2], cos_sin); // 返回 x[0] 和 x[64]

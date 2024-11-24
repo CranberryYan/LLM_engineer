@@ -86,4 +86,22 @@ target_link_libraries(
     test_fused_addresidual_norm PUBLIC
     -lcudart
     -lcudadevrt
-    fused_addresidual_norm) 
+    fused_addresidual_norm)
+
+add_executable(test_act
+    test_act.cu
+)
+target_link_libraries(  
+    test_act PUBLIC
+    -lcudart
+    -lcudadevrt
+    act_kernel)
+
+add_executable(test_fused_decoder_attention
+    test_fused_decoder_attention.cu
+)
+target_link_libraries(  
+    test_fused_decoder_attention PUBLIC
+    -lcudart
+    -lcudadevrt
+    fused_decoder_self_attention)

@@ -53,3 +53,13 @@ add_library(fused_addresidual_norm STATIC fused_addresidual_norm.cu)
 set_property(TARGET fused_addresidual_norm PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
 set_property(TARGET fused_addresidual_norm PROPERTY POSITION_INDEPENDENT_CODE  ON)
 set_property(TARGET fused_addresidual_norm PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+
+add_library(act_kernel STATIC act_kernel.cu)
+set_property(TARGET act_kernel PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET act_kernel PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET act_kernel PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+
+add_library(fused_decoder_self_attention STATIC fused_decoder_self_attention.cu)
+set_property(TARGET fused_decoder_self_attention PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET fused_decoder_self_attention PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET fused_decoder_self_attention PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)

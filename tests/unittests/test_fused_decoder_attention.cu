@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
     cudaMalloc((void **)&d_qkv_bias, sizeof(float) * (2 * kv_num_heads + num_heads) * head_size);                                                
     for (int i = 0; i < (2 * kv_num_heads + num_heads) * head_size; i++)                                                                         
     {                                                                                                                                            
-        h_qkv_bias[i] = (float)0.0f;                                                                                                             
+        h_qkv_bias[i] = (float)1.0f;                                                                                                             
     }                                                                                                                                            
     cudaMemcpy(d_qkv, h_qkv, sizeof(float) * batch_size * (2 * kv_num_heads + num_heads) * head_size, cudaMemcpyHostToDevice);                   
     cudaMemcpy(d_qkv_bias, h_qkv_bias, sizeof(float) * (2 * kv_num_heads + num_heads) * head_size, cudaMemcpyHostToDevice);                      

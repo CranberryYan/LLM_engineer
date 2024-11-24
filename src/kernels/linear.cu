@@ -20,6 +20,7 @@
 // gate: [bs/token_nums, qhidden_units] * [qhidden_units, inter_size]
 // up:   [bs/token_nums, qhidden_units] * [qhidden_units, inter_size]
 // fusedGateUpGemm: [bs/token_nums, qhidden_units] * [qhidden_units, 2 * inter_size] = [bs/token_nums, 2, inter_size]
+// 2 * inter_size: gate_linear 和 up_linear 的 weight进行水平拼接
 // down: [bs/token_nums, inter_size] * [qhidden_units, inter_size]
 template <typename T>
 void launchLinearGemm(TensorWrapper<T>* input, BaseWeight<T> &weight,
@@ -35,10 +36,14 @@ void launchLinearGemm(TensorWrapper<T>* input, BaseWeight<T> &weight,
     int Ak = weight.shape[0];
     int Bk = input->shape[1];
     int Bn = input->shape[0];
+    int Cm = output->shape[1];
     int Cn = output->shape[0];
 
     // 输入为3维
     Bk = input->shape.size() == 3 ? input-> shape[1] * input->shape[2] : input->shape[1];
+    
+    // 输出为3维
+    Cm = output->shape.size() == 3 ? output->shape[1] * output->shape[2] : output->shape[1];
 
     int lda = Am;
     int ldb = Bk;

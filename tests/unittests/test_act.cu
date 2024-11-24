@@ -56,9 +56,9 @@ void test_act(int batch_size, int intermedia_size, int input_size , int output_s
     CPUSwiGLU(h_input, CPU_output, batch_size, intermedia_size);
     bool is_true = CheckResult(CPU_output, h_output, output_size);
     if(is_true){
-        printf("test passed");
+        printf("test passed\n");
     } else {
-        printf("test failed");
+        printf("test failed\n");
     }
 
     free(h_input);

@@ -3,6 +3,41 @@
 # include <cuda_fp16.h>
 
 
+template<typename T_OUT, typename T_IN>
+inline __device__ T_OUT scalar_cast_vec(T_IN val)
+{
+    return val;
+}
+
+template<>
+inline __device__ half2 scalar_cast_vec<half2, float>(float val)
+{
+    return __float2half2_rn(val);
+}
+
+template<>
+inline __device__ float4 scalar_cast_vec<float4, float>(float val)
+{
+    return make_float4(val, val, val, val);
+}
+
+template<>
+inline __device__ float2 scalar_cast_vec<float2, float>(float val)
+{
+    return make_float2(val, val);
+}
+
+template<>
+inline __device__ half2 scalar_cast_vec<half2, half>(half val)
+{
+    //(RussWong)note: __half2half2 cant be parsed by my nvcc compiler, so I give it up
+    //return __half2half2(val);
+    half2 res;
+    res.x = val;
+    res.y = val;
+    return res;
+}
+
 // 向量化load和store时, 会用到
 // FP32   FP16
 template<typename T>
