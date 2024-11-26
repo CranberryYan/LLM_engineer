@@ -63,3 +63,8 @@ add_library(fused_decoder_self_attention STATIC fused_decoder_self_attention.cu)
 set_property(TARGET fused_decoder_self_attention PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
 set_property(TARGET fused_decoder_self_attention PROPERTY POSITION_INDEPENDENT_CODE  ON)
 set_property(TARGET fused_decoder_self_attention PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+
+add_library(topk STATIC topK.cu)
+set_property(TARGET topk PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET topk PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET topk PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)

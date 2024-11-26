@@ -14,7 +14,7 @@
 int main() {
     const int batch_size = 1;
     const int vocab_size = 30000;
-    const int beamwidth = 2;
+    const int beamwidth = 1;
     const int K = 5;
     const int BlockPerBeam = 8;
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
@@ -81,7 +81,7 @@ int main() {
         int id = h_final_topk_ids[i];
         printf("topK id = %d\n", id);
         float val = h_final_topk_vals[i];
-        printf("topK val =%f\n", val);
+        printf("topK val = %f\n", val);
     }
     // debug info, better to retain: std::cout << "before free" << std::endl;
     free(h_probs);
