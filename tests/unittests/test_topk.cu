@@ -14,7 +14,7 @@
 int main() {
     const int batch_size = 1;
     const int vocab_size = 30000;
-    const int beamwidth = 1;
+    const int beamwidth = 3;
     const int K = 5;
     const int BlockPerBeam = 8;
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
@@ -45,8 +45,7 @@ int main() {
     h_final_topk_vals = (float*)malloc(sizeof(float) * final_topK_val_buf_size);
     cudaMalloc((void**)&d_final_topk_vals, sizeof(float) * final_topK_val_buf_size);
 
-    for(int i = 0; i < probs_size; i++) { // 0-59999
-       h_probs[i] = i;
+    for(int i = 0; i < probs_size; i++) {
     }
     cudaMemcpy(d_probs, h_probs, sizeof(float)*probs_size, cudaMemcpyHostToDevice);
 
