@@ -122,7 +122,7 @@ __global__ void RMSNorm(half* decoder_in, half* scale,
     for (int idx = threadIdx.x; idx < hidden_units / vec_size; idx += blockDim.x) {
         Vec_t vec = dout[idx]; // 向量化, idx每次加1, 但是因为dout是float4 or half2, 因此地址会默认每次加 4 or 2
         thread_sum += __half2float(vec.x) * __half2float(vec.x);
-        thread_sum += __half2float(vec.y) * __half2float(vec.y); 
+        thread_sum += __half2float(vec.y) * __half2float(vec.y);
     }
     thread_sum = blockReduceSum<half>(thread_sum);
 
