@@ -153,16 +153,13 @@ public:
         return (T*) data;
     }
 
-    inline std::string toString() const 
-    {
+    inline std::string toString() const {
         std::string device_str = DeviceString();
 
         static const std::unordered_map<DataType, std::string> type_to_string{
             {INT8, "INT8"},
             {FP16, "FP16"},
-            {FP32, "FP32"},
-
-        };
+            {FP32, "FP32"},};
 
         return fmtstr("Tensor[where=%s, type=%s, shape=%s, data=%p]",
                     device_str.c_str(),
