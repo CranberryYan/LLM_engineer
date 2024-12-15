@@ -6,9 +6,23 @@
 // Qk gemm -> Attention mask -> Scale -> Softmax
 // 三个访存密集算子的融合
 
-// input: [M, N]
-// 每个block处理一行(N个元素)
-// 
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+//                              |
+//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              |
+//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              |
+//                              -> RMSNorm: [num_tokens, hidden_size] -> fusedQkvGemm: * [hidden_size, hidden_size] -> [num_tokens, hidden_size]
+//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_size] -> [bs, q_head_num, max_q_len, head_size]  ->
+//                                            |                                       |
+//                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
+//                                            |                                       |
+//                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
+//                                            -> ConcatPastKVcache: [num_layers, bs, kv_head_num, max_seq_len(8192), head_size]
+//                                            |     cache的内容: [bs, kv_head_num, seqlen[history_len : history_len + max_q_len], head_size]
+//                                            |
+//                                            -> Broadcast: kv: [bs, q_head_num, max_q_len, head_size]
+//								-> Attention: [bs, q_head_num, max_q_len, max_q_len]
 #include <math.h>
 #include <float.h>
 #include <iostream>
@@ -62,7 +76,6 @@ template <typename T, int NUMS_PER_THREAD_PER_ROW>
 __global__ void ScaleMaskAndSoftmax_float(T *attn_score, T *qk, T *mask,
 	int batch_size, int head_nums,
 	int q_len, int k_len, float scale) {
-	
 	// dim3 grid(batch_size, head_nums, q_length);
 	// dim3 block((k_length + 32 - 1) / 32 * 32);
 	int batch_id = blockIdx.x;
@@ -71,8 +84,10 @@ __global__ void ScaleMaskAndSoftmax_float(T *attn_score, T *qk, T *mask,
 	if (threadIdx.x >= k_len) {
 		return;
 	}
-	// qk: [batch_size, head_num, q_length, k_legnth]
-	// attention_mask:  [batch_size, q_length, k_length]
+	// q: [bs, q_head_num, max_q_len, head_size]
+	// k: [bs, q_head_num, max_q_len, head_size](broadcast: k_head_num -> q_head_num)
+	// qk: [batch_size, q_head_num, max_q_len, max_q_len]
+	// attention_mask:  [batch_size, max_q_len, max_q_len]
 	__shared__ float s_max;
 	__shared__ float inv_sum;
 	for (int i = q_id; i < q_len; i += gridDim.z) { // 行
@@ -129,9 +144,9 @@ template<typename T>
 void launchScaleMaskAndSoftmax(TensorWrapper<T>* qk, TensorWrapper<T>* mask, 
 	TensorWrapper<T>* attn_score, float scale) {
 
-	// attention_score: [batch_size, head_num, q_length, k_legnth]
-	// qk:              [batch_size, head_num, q_length, k_legnth]
-	// attention_mask:  [batch_size, q_length, k_length]
+	// attention_score: [batch_size, head_num, max_q_len, max_k_len] (max_q_len == max_k_len)
+	// qk:              [batch_size, head_num, max_q_len, max_k_len]
+	// attention_mask:  [batch_size, max_q_len, max_k_len]
 	int batch_size = qk->shape[0];
 	int head_nums = qk->shape[1];
 	int q_length = qk->shape[2];

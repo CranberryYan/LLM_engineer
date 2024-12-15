@@ -35,6 +35,8 @@ bool CheckResult(float* CPUres, float* GPUres, const int size) {
         if(fabs(CPUres[i] - GPUres[i]) > 1e-6){
             printf("the %dth res is wrong, CPU mask = %f, GPU mask = %f\n", i, CPUres[i], GPUres[i]);
             return false;
+        } else {
+            printf("the %dth res, CPU mask = %f, GPU mask = %f\n", i, CPUres[i], GPUres[i]);
         }
     }
     return true;

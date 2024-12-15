@@ -2,7 +2,6 @@
 #include "cublas_utils.h"
 
 
-
 cublasWrapper::cublasWrapper(cublasHandle_t cublas_handle,
                                  cublasLtHandle_t cublaslt_handle):
     cublas_handle(cublas_handle),

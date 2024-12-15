@@ -1,3 +1,21 @@
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+//                              |
+//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              |
+//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              |
+//                              -> RMSNorm: [num_tokens, hidden_size] -> fusedQkvGemm: * [hidden_size, hidden_size] -> [num_tokens, hidden_size]
+//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_size] -> [bs, q_head_num, max_q_len, head_size]  ->
+//                                            |                                       |
+//                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
+//                                            |                                       |
+//                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
+//                                            -> ConcatPastKVcache: [num_layers, bs, kv_head_num, max_seq_len(8192), head_size]
+//                                            |     cache的内容: [bs, kv_head_num, seqlen[history_len : history_len + max_q_len], head_size]
+//                                            |
+//                                            -> Broadcast: kv: [bs, q_head_num, max_q_len, head_size]
+//								-> Attention: [bs, q_head_num, max_q_len, max_q_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
+//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len, hidden_size]
 #include <iostream>
 #include "src/kernels/fused_transpose_and_remv_pad.h"
 
@@ -30,8 +48,7 @@ template <typename T>
 void launchTransposeOutRemovePadding(
     TensorWrapper<T> *qkv_buf_w_pad,
     TensorWrapper<int> *padding_offset,
-    TensorWrapper<T> *qkv_buf_wo_pad_1)
-{
+    TensorWrapper<T> *qkv_buf_wo_pad_1) {
     int batch_size = qkv_buf_w_pad->shape[0];
     int head_num = qkv_buf_w_pad->shape[1];
     int seq_len = qkv_buf_w_pad->shape[2];

@@ -1,3 +1,22 @@
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+//                              |
+//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              |
+//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              |
+//                              -> RMSNorm: [num_tokens, hidden_size] -> fusedQkvGemm: * [hidden_size, hidden_size] -> [num_tokens, hidden_size]
+//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_size] -> [bs, q_head_num, max_q_len, head_size]  ->
+//                                            |                                       |
+//                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
+//                                            |                                       |
+//                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
+//                                            -> ConcatPastKVcache: [num_layers, bs, kv_head_num, max_seq_len(8192), head_size]
+//                                            |     cache的内容: [bs, kv_head_num, seqlen[history_len : history_len + max_q_len], head_size]
+//                                            |
+//                                            -> Broadcast: kv: [bs, q_head_num, max_q_len, head_size]
+//								-> Attention: [bs, q_head_num, max_q_len, max_q_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
+//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len(num_tokens), hidden_size]
+//                              -> FusedAddbiasResidual: [bs, seq_len, hidden_size]
 #include <stdio.h>
 #include "src/kernels/fused_addresidual_norm.h"
 

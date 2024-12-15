@@ -1,5 +1,13 @@
-# include <iostream>
-# include "rmsnorm_kernel.h"
+// 归一化
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+//                              |
+//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              |
+//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              |
+//                              -> RMSNorm: [num_tokens, hidden_size]
+#include <iostream>
+#include "rmsnorm_kernel.h"
 
 
 /*
@@ -65,8 +73,8 @@ __device__ T blockReduceSum(T val) {
 
 template<typename T>
 __global__ void RMSNorm(
-    T* decoder_in,  // input & output: [num_tokens(bs), q_hidden_units]
-    T* scale,       // intput: [q_hidden_units], RMSNorm weights
+    T* decoder_in,  // input & output: [num_tokens, hidden_size]
+    T* scale,       // intput: [hidden_size], RMSNorm weights
     float eps,      // RMSNorm: 防止0作被除数
     int num_tokens,
     int hidden_units) {
@@ -74,8 +82,7 @@ __global__ void RMSNorm(
 
 template<>
 __global__ void RMSNorm(float* decoder_in, float* scale,
-    float eps, int num_tokens, int hidden_units)
-{
+    float eps, int num_tokens, int hidden_units) {
     int vec_size = Vec<float>::size; // size: static, 无需将类实例化, 可以调用
     using Vec_t = typename Vec<float>::Type;
 
@@ -140,6 +147,8 @@ __global__ void RMSNorm(half* decoder_in, half* scale,
     }
 }
 
+
+// input: [num_tokens, hidden_size]
 template<typename T>
 void launchRMSNorm(TensorWrapper<T>* decoder_in,
     LayerNormWeight<T> &attn_norm_weight, float eps) {
@@ -148,10 +157,7 @@ void launchRMSNorm(TensorWrapper<T>* decoder_in,
     int num_thread = std::min<int>(hidden_units / 4, 1024); // 向量化的读取, 一个thread负责4个数据, 最大为1024
     dim3 grid(num_tokens);
     dim3 block(num_thread);
-    
-    std::cout << "calling RMSNorm" << std::endl;
     RMSNorm<T><<<grid, block>>>(decoder_in->data, attn_norm_weight.gamma, eps, num_tokens, hidden_units);
-    std::cout << "called RMSNorm" << std::endl;
 }
 
 template void launchRMSNorm(TensorWrapper<float>* decoder_out,

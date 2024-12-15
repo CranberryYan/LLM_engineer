@@ -88,15 +88,15 @@ int main()
     cudaMemcpy(h_k_dst, d_k_dst, sizeof(float) * kvcache_size, cudaMemcpyDeviceToHost);
     // debug info, better to retain: std::cout << "cuda memcpy device to host" << std::endl;
     // note: need to add offset2index and index2offset API to help us program and check result
-    for (int i = batch_size * (1) * kv_head_num * head_size; i < batch_size * max_seq_len * kv_head_num * head_size; i++)
-    {
-        printf("index = %d\n", i);
-        printf("res k = %f\n", h_k_dst[i]);
-        // debug info, better to retain: printf("topK id = %d\n", id);
-        printf("res v = %f\n", h_v_dst[i]);
-        printf("===============\n");
-        // debug info, better to retain: printf("topK val =%f\n", val);
-    }
+    // for (int i = batch_size * (1) * kv_head_num * head_size; i < batch_size * max_seq_len * kv_head_num * head_size; i++)
+    // {
+    //     printf("index = %d\n", i);
+    //     printf("res k = %f\n", h_k_dst[i]);
+    //     // debug info, better to retain: printf("topK id = %d\n", id);
+    //     printf("res v = %f\n", h_v_dst[i]);
+    //     printf("===============\n");
+    //     // debug info, better to retain: printf("topK val =%f\n", val);
+    // }
     // debug info, better to retain: std::cout << "before free" << std::endl;
     free(h_k_src);
     free(h_v_src);

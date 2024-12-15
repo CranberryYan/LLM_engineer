@@ -1,3 +1,25 @@
+// Broadcast
+//  MQA
+//  AddbiasAndPaddingAndRope后要进行Qk gemm, 所以需要将
+//      [num_layers, bs, kv_head_num, max_seq_len(8192), head_size] -> [bs, q_head_num, max_q_len, head_size]
+//      kv_head_num -> q_head_num
+//
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+//                              |
+//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              |
+//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              |
+//                              -> RMSNorm: [num_tokens, hidden_size] -> fusedQkvGemm: * [hidden_size, hidden_size] -> [num_tokens, hidden_size]
+//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_size] -> [bs, q_head_num, max_q_len, head_size]  ->
+//                                            |                                       |
+//                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
+//                                            |                                       |
+//                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
+//                                            -> ConcatPastKVcache: [num_layers, bs, kv_head_num, max_seq_len(8192), head_size]
+//                                            |     cache的内容: [bs, kv_head_num, seqlen[history_len : history_len + max_q_len], head_size]
+//                                            |
+//                                            -> Broadcast: kv: [bs, q_head_num, max_q_len, head_size]
 #include <iostream>
 #include "src/kernels/repeat_kv.h"
 
@@ -7,8 +29,7 @@
 template <typename T>
 __global__ void repeat_value_cache(T *v_dst, T *v_src,const size_t layer_offset,
     const int head_num, const int q_head_per_kv, const int head_size,
-    const int *context_length, const int max_k_len, const int max_seq_len)
-{
+    const int *context_length, const int max_k_len, const int max_seq_len) {
     // [bs, q_head_num, max_k_len, head_size]
     // dim3 grid((max_k_len * head_size + blockSize - 1) / blockSize, batch_size, head_num);
     const int batch_id = blockIdx.y;
@@ -39,8 +60,7 @@ __global__ void repeat_value_cache(T *v_dst, T *v_src,const size_t layer_offset,
 template<typename T>
 void launchRepeatKVCache(TensorWrapper<T> *k_cache_src, TensorWrapper<T> *v_cache_src,
     TensorWrapper<int> *context_length, TensorWrapper<int> *layer_id,
-    TensorWrapper<T> *k_cache_dst, TensorWrapper<T> *v_cache_dst)
-{
+    TensorWrapper<T> *k_cache_dst, TensorWrapper<T> *v_cache_dst) {
     // kv cache shape: [num_layers, bs, kv_head_num, max_seq_len, head_size]
     // int batch_size = context_length->shape[0]; // 是否可以用k_cache_src->shape[1]; ???
     int batch_size = k_cache_src->shape[1];

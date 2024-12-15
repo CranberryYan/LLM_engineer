@@ -1,14 +1,31 @@
-// 注: Llama2中的RoPE, 是前一半与后一半为一组, 因此, 向量化全为错的
+// linear: 用于gemm, 2d x 2d: fused
+//          batch_gemm, 4d x 4d: [batch_size, head_num, seq_len, head_size]: Qk_gemm, Qk*v_gemm
+//          LMHead(linear): hidden_units -> vocab_size(接下来要sampling)
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+//                              |
+//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              |
+//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              |
+//                              -> RMSNorm: [num_tokens, hidden_size] -> fusedQkvGemm: * [hidden_size, hidden_size] -> [num_tokens, hidden_size]
+//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_size] -> [bs, q_head_num, max_q_len, head_size]  ->
+//                                                                                          |
+//                                                                                          -> [bs, kv_head_num, max_q_len, head_size] ->
+//                                                                                          |
+//                                                                                          -> [bs, kv_head_num, max_q_len, head_size] ->
 
+// 注: Llama2中的RoPE, 是前一半与后一半为一组, 因此, 不可以向量化计算
 // 1. add qkv_bias to QKV, which has shape[num tokens, qkv head num, head_size], k head num = v head num
 // 2. padding, QKV splits to q k v and their shape is [bs, q head num(kv head num), max q len, head_size]
 // 3. rope and do attention
 // 4. write back to global memory
+// 在多头注意力中, 模型的总维度(即 hidden_size)被分成多个独立的子空间, 每个子空间对应一个注意力头。
+//  每个注意力头只会处理输入的一个子空间(即一个较小的维度), 因此每个头的维度为 head_size
 // input:  QKV: [num_tokens, qkv_head_num, head_size]
 //         qkv bias: [qkv_head_num, head_size]
 // output: q: [bs, q_head_num, max_q_len, head_size]
 //         k: [bs, kv_head_num, max_q_len, head_size]
-//         v: [bs, kv_head_num, max q len, head_size]
+//         v: [bs, kv_head_num, max_q_len, head_size]
 // repeat kv
 #include <math.h>
 #include <stdio.h>
@@ -30,16 +47,16 @@
 //                          device="cuda")
 
 //         freqs = torch.einsum("i,j -> ij", t, inv_freq) // 外积
-//         cos = freqs.cos() // 2048，64
+//         cos = freqs.cos() // 2048, 64
 //         sin = freqs.sin()
 //         cache = torch.cat((cos, sin), dim=-1)
 //         return cache
 
 // cos与sin中的角度(seita)
 inline __device__ float2 GetRoPEfreq(int zid, int rot_embed_dim, float base, float t_step) {
-
     // 对应 HF 的 inv_freq
     float inv_freq = t_step / powf(base, zid / (float)rot_embed_dim);
+
     return {cos(inv_freq), sin(inv_freq)};
 }
 
@@ -51,58 +68,6 @@ inline __device__ float2 GetRoPEres(float data, float data_rotate, const float2 
 
     return rot_v;
 }
-
-// // RoPE公式决定必须做向量化
-// // x0 x1 两两为一组共享seita(用f表示)
-// // x0 * cos(mf0) - x1 * sin(mf0)
-// // x1 * cos(mf0) + x0 * sin(mf0)
-// inline __device__ float2 GetRoPEres(const float2 v, const float2 coef) {
-//     float2 rot_v; // rotary value
-//     rot_v.x = coef.x * v.x - coef.y * v.y;
-//     rot_v.y = coef.x * v.y + coef.y * v.x;
-
-//     return rot_v;
-// }
-
-// inline __device__ half2 GetRoPEres(const half2 v, const float2 coef) {
-//     float2 fv = __half22float2(v);
-//     float2 rot_fv = GetRoPEres(fv, coef);
-    
-//     return __float22half2_rn(rot_fv);
-// }
-
-// inline __device__ void apply_RoPE(half2 &q, half2 &k, 
-//     int tid, int rot_embed_dim, float base, float t_step)
-// {
-//     if (2 * tid >= rot_embed_dim) {
-//         return;
-//     }
-
-//     const auto coef = GetRoPEfreq(2 * tid, rot_embed_dim, base, t_step);
-//     q = GetRoPEres(q, coef);
-//     k = GetRoPEres(k, coef);
-// }
-
-// // 两两一组, float4拆成 2 + 2
-// inline __device__ void apply_RoPE(float4 &q, float4 &k, 
-//     int tid, int rot_embed_dim, float base, float t_step)
-// {
-//     if (4 * tid >= rot_embed_dim) {
-//         return;
-//     }
-
-//     // 两两一组, float4拆成 2 + 2
-//     TwoFloat2 &q_ = *reinterpret_cast<TwoFloat2* >(&q);
-//     TwoFloat2 &k_ = *reinterpret_cast<TwoFloat2* >(&k);
-
-//     float2 coef0 = GetRoPEfreq(4 * tid, rot_embed_dim, base, t_step);
-//     q_.x = GetRoPEres(q_.x, coef0);
-//     k_.x = GetRoPEres(k_.x, coef0);
-
-//     float2 coef1 = GetRoPEfreq(4 * tid + 2, rot_embed_dim, base, t_step);
-//     q_.y = GetRoPEres(q_.y, coef1);
-//     k_.y = GetRoPEres(k_.x, coef1);
-// }
 
 template <typename T>
 __global__ void add_fusedQKV_bias_transpose_kernel(
@@ -120,12 +85,10 @@ __global__ void add_fusedQKV_bias_transpose_kernel(
     const int rotary_embedding_dim,
     float rotary_embedding_base,    // default 10000 in llama
     int max_position_embeddings,    /*default 2048 in llama*/
-    bool use_dynamic_ntk            /*placeholder for ntk RoPE*/)
-{
+    bool use_dynamic_ntk            /*placeholder for ntk RoPE*/) {
     int vec_size = Vec<T>::size;
     using Vec_t = typename Vec<T>::Type;
-    
-    // 为什么写 token_id 和 head_id -> 得到offset
+    // offset
     int token_id = blockIdx.x;
     int head_id  = blockIdx.y;
     int tid = threadIdx.x;
@@ -153,9 +116,9 @@ __global__ void add_fusedQKV_bias_transpose_kernel(
     float2 k_rotate = GetRoPEres(QKV[k_id], QKV[k_id + head_size / 2], cos_sin); // 返回 x[0] 和 x[64]
 
     // wrtie back
-    // output: q: [bs, q head num, max q len, head size]
-    //         k: [bs, kv head num, max q len, head size]
-    //         v: [bs, kv head num, max q len, head size]
+    // output: q: [bs, q_head_num, max_q_len, head_size]
+    //         k: [bs, kv_head_num, max_q_len, head_size]
+    //         v: [bs, kv_head_num, max_q_len, head_size]
     int dst_q_id  = batch_id * head_num * seq_len * head_size +
                     head_id * seq_len * head_size + 
                     local_token_id * head_size + tid;
@@ -171,94 +134,6 @@ __global__ void add_fusedQKV_bias_transpose_kernel(
         k_buf[dst_kv_id + head_size / 2] = k_rotate.y;
     }
 }
-
-// template <>
-// __global__ void add_fusedQKV_bias_transpose_kernel(
-//     half *q_buf, half *k_buf, half *v_buf, half *QKV,
-//     const half *qkv_bias,
-//     const int *padding_offset,      // created before qkv linear
-//     const int *history_length,
-//     const int *input_length,        // actual length of each seq
-//     const int batch_size,
-//     const int seq_len,              // max_seq_len to pad to
-//     const int token_num,
-//     const int head_num,
-//     const int kv_head_num,
-//     const int head_size,
-//     const int rotary_embedding_dim,
-//     float rotary_embedding_base,    // default 10000 in llama
-//     int max_position_embeddings,    /*default 2048 in llama*/
-//     bool use_dynamic_ntk            /*placeholder for ntk RoPE*/)
-// {
-    // int vec_size = Vec<half>::size;
-    // using Vec_t = typename Vec<half>::Type;
-    // int token_id = blockIdx.x;
-    // int head_id = blockIdx.y;
-    // int tid = threadIdx.x;
-    // int token_padding_offset = padding_offset[token_id];
-    
-    // // 0. filter the redundant part, we'd better to allocate more threads than data to ensure all data can be vectorized
-    // bool is_data = tid * vec_size < head_size;
-    
-    // // 1. prapare rebuilding , do rebuild padding and transpose when store
-    // int dst_token_id = token_id + token_padding_offset; // token id after rebuild padding
-
-    // int batch_id = dst_token_id / seq_len;       // seqlen is max_seq_len for padding used to unify all seq's length
-    // int local_token_id = dst_token_id % seq_len; // 每个seq中的局部token id
-
-    // // 2. bias add
-    // int qkv_head_num = head_num + 2 * kv_head_num;
-    // int q_id = token_id * qkv_head_num * head_size + head_id * head_size + tid * vec_size;
-    // int k_id = token_id * qkv_head_num * head_size + head_id * head_size + tid * vec_size + head_num * head_size;
-    // int v_id = token_id * qkv_head_num * head_size + head_id * head_size + tid * vec_size + head_num * head_size + kv_head_num * head_size;
-    // // note: scalar add can be replaced by 3 overloaded function call, which is implemented by float add, float2 add and float4 add.
-    // // TODO: reduce the pointer converter and fuse for loop
-    // Vec_t q, k, v;
-    // if (is_data)
-    // {
-    //     q = *reinterpret_cast<Vec_t *>(&QKV[q_id]);
-    //     Vec_t q_bias = *reinterpret_cast<Vec_t *>(const_cast<half *>(&qkv_bias[head_id * head_size + tid * vec_size]));
-    //     q = __hadd2(q, q_bias);
-    // }
-    // // note: kv judge condition is add a item that head_id<kv_head_id in case of GQA and MQA
-    // if (is_data && head_id < kv_head_num)
-    // {
-    //     k = *reinterpret_cast<Vec_t *>(&QKV[k_id]);
-    //     // note: I missed a vec_size about the bias offset causing memcpyd2h misaligned address
-    //     Vec_t k_bias = *reinterpret_cast<Vec_t *>(const_cast<half *>(&qkv_bias[head_id * head_size + tid * vec_size + head_num * head_size]));
-    //     k = __hadd2(k, k_bias);
-    //     v = *reinterpret_cast<Vec_t *>(&QKV[v_id]);
-    //     Vec_t v_bias = *reinterpret_cast<Vec_t *>(const_cast<half *>(&qkv_bias[head_id * head_size + tid * vec_size + head_num * head_size + kv_head_num * head_size]));
-    //     v = __hadd2(v, v_bias);
-    // }
-
-    // // 3. RoPE
-    // const int cur_seq_history_len = history_length[batch_id]; // pay attention to where the history lenght cumsum
-    // const int context_length = cur_seq_history_len + input_length[batch_id];
-    // const int timestep = cur_seq_history_len + local_token_id; //+ local_token_id得到m，即要结合history length做全局位置编码
-    // // timestep为cos(m*theta)中的m
-
-    // apply_RoPE(q, k, tid, rotary_embedding_dim, rotary_embedding_base, timestep);
-    // // 4.write back to gmem and do transpose
-    // //  [bs, head num, seqlen, head size]
-    // //  pay attention to local token id and kv head num and max_seq_len(seq_len)
-    // int dst_q_id = batch_id * seq_len * head_num * head_size +
-    //                head_id * seq_len * head_size +
-    //                local_token_id * head_size + tid * vec_size;
-
-    // int dst_kv_id = batch_id * seq_len * kv_head_num * head_size +
-    //                 head_id * seq_len * head_size +
-    //                 local_token_id * head_size + tid * vec_size;
-    // if (is_data)
-    // {
-    //     *reinterpret_cast<Vec_t *>(&q_buf[dst_q_id]) = q; // remember to add & before q_buf[], cause q_buf[] is a scalar
-    //     if (head_id < kv_head_num)
-    //     { // for MQA and GQA
-    //         *reinterpret_cast<Vec_t *>(&k_buf[dst_kv_id]) = k;
-    //         *reinterpret_cast<Vec_t *>(&v_buf[dst_kv_id]) = v;
-    //     }
-    // }
-// }
 
 template <typename T>
 __global__ void rope_kernel_for_self_decoder(T *q, T *k, const int batch_szie, 
@@ -297,21 +172,15 @@ __global__ void rope_kernel_for_self_decoder(half *q, half*k,
 
     }
 
-// input: [num tokens, qkv head_num, head size]
-// output: q: [bs, head num, max q len, head size]
-//       k/v: [bs, kv head num, max q len, head size]
+// input: [num_tokens, hidden_size]
+// output: q: [bs, head_num, max_q_len, head size]
+//       k/v: [bs, kv head_num, max_q_len, head size]
 template <typename T>
 void launchAddFusedQKVBiasTransposeAndRoPE(
-    TensorWrapper<T> *q_buf,
-    TensorWrapper<T> *k_buf,
-    TensorWrapper<T> *v_buf,
-    TensorWrapper<T> *QKV,
-    BaseWeight<T> &qkv,
-    TensorWrapper<int> *padding_offset,
-    TensorWrapper<int> *history_length,
-    TensorWrapper<int> *input_length,
-    LLaMAAttentionStaticParams &params)
-{
+    TensorWrapper<T> *q_buf, TensorWrapper<T> *k_buf, TensorWrapper<T> *v_buf,
+    TensorWrapper<T> *QKV, BaseWeight<T> &qkv,
+    TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
+    LLaMAAttentionStaticParams &params) {
     int token_num = QKV->shape[0];
     int qkv_head_num = QKV->shape[1];
     int head_size = QKV->shape[2];
@@ -342,30 +211,3 @@ template void launchAddFusedQKVBiasTransposeAndRoPE(
 //             TensorWrapper<half> *QKV, BaseWeight<half> &qkv,
 //             TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
 //             LLaMAAttentionStaticParams &params);
-
-template<typename T>
-void launchRoPE(
-    TensorWrapper<T> *qkv_buf, 
-    TensorWrapper<int> *step, // 历史句子长度, 相当于const int time_step = cur_seq_history_len + local_token_id;
-    LLaMAAttentionStaticParams &static_params)
-{
-    int head_num = 32; // only for Llama2
-    const int batch_size = qkv_buf->shape[0];
-    const int qkv_head_num = qkv_buf->shape[1];
-    const int head_size = qkv_buf->shape[2];
-    const int cur_step = step->getVal();
-
-    T *qkv_data = qkv_buf->data;
-    T *q = qkv_data;
-    T *k = qkv_data + head_num * head_size;
-
-    int rotary_embedding_dim = static_params.rotary_embedding_dim;
-    float rotary_embedding_base = static_params.rotary_embedding_base;
-    int max_position_embeddnigs = static_params.max_position_embeddings;
-    
-    dim3 grid(head_num, batch_size);
-    dim3 block(head_size);
-    rope_kernel_for_self_decoder<T><<<grid, block>>>(
-        q, k, batch_size, head_num, head_size, cur_step, 
-        rotary_embedding_dim, rotary_embedding_base);
-}
