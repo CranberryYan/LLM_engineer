@@ -47,3 +47,11 @@ inline void llmAssert(bool result, const char* const file, int const line, std::
             llmAssert(is_valid_val, __FILE__, __LINE__, (info));                                                        \
         }                                                                                                               \
     } while (0)
+
+#define DeviceSyncAndCheckCudaError() syncAndCheck(__FILE__, __LINE__)
+
+[[noreturn]] inline void throwRuntimeError(const char* const file, int const line, std::string const& info = "")
+{
+    throw std::runtime_error(std::string("[oneLLM][ERROR] ") + info + " Assertion fail: " + file + ":"
+                             + std::to_string(line) + " \n");
+}

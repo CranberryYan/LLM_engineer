@@ -118,3 +118,25 @@ void LLaMAContextAttentionLayer<T>::allocForForward(
 			qkv_buf_w_pad->data, sizeof(T) * batch_size * max_q_len * head_num * head_size, false);
 	qkv_buf_wo_pad_1->data= allocator->Malloc(qkv_buf_wo_pad_1->data, sizeof(T) * num_tokens * head_num * head_size, false);
 }
+
+template<typename T>    
+void LLaMAContextAttentionLayer<T>::freeBuf(){
+    allocator->Free(qkv_buf_wo_pad->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->Free(q_buf_w_pad->data);
+    DeviceSyncAndCheckCudaError();
+//	allocator->Free(k_buf_w_pad->data);
+//	allocator->Free(v_buf_w_pad->data);
+//	DeviceSyncAndCheckCudaError();
+//		no need to free k_buf_w_pad, v_buf_w_pad, because its included in Free(q_buf_w_pad->data)
+    allocator->Free(k_cache_buf->data);
+    DeviceSyncAndCheckCudaError();
+//	allocator->Free(v_cache_buf->data);
+//	DeviceSyncAndCheckCudaError();
+//		no need to free v_cache_buf, because its included in Free(k_cache_buf->data)
+    allocator->Free(qk_buf->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->Free(qkv_buf_w_pad->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->Free(qkv_buf_wo_pad_1->data);
+}
