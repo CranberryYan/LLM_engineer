@@ -21,8 +21,8 @@
 //                                            -> ConcatPastKVcache: [num_layers, bs, kv_head_num, max_seq_len(8192), head_size]
 //                                            |     cache的内容: [bs, kv_head_num, seqlen[history_len : history_len + max_q_len], head_size]
 //                                            |
-//                                            -> Broadcast: kv: [bs, q_head_num, max_q_len, head_size]
-//								-> Attention: [bs, q_head_num, max_q_len, max_q_len]
+//                                            -> Broadcast: kv: [bs, q_head_num, max_k_len, head_size]
+//								-> Attention: [bs, q_head_num, max_q_len, max_k_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
 #include <math.h>
 #include <float.h>
 #include <iostream>
@@ -85,9 +85,9 @@ __global__ void ScaleMaskAndSoftmax_float(T *attn_score, T *qk, T *mask,
 		return;
 	}
 	// q: [bs, q_head_num, max_q_len, head_size]
-	// k: [bs, q_head_num, max_q_len, head_size](broadcast: k_head_num -> q_head_num)
-	// qk: [batch_size, q_head_num, max_q_len, max_q_len]
-	// attention_mask:  [batch_size, max_q_len, max_q_len]
+	// k: [bs, q_head_num, max_k_len, head_size](broadcast: k_head_num -> q_head_num)
+	// qk: [batch_size, q_head_num, max_q_len, max_k_len]
+	// attention_mask:  [batch_size, max_q_len, max_k_len]
 	__shared__ float s_max;
 	__shared__ float inv_sum;
 	for (int i = q_id; i < q_len; i += gridDim.z) { // 行

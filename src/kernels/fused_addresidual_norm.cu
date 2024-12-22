@@ -13,8 +13,8 @@
 //                                            -> ConcatPastKVcache: [num_layers, bs, kv_head_num, max_seq_len(8192), head_size]
 //                                            |     cache的内容: [bs, kv_head_num, seqlen[history_len : history_len + max_q_len], head_size]
 //                                            |
-//                                            -> Broadcast: kv: [bs, q_head_num, max_q_len, head_size]
-//								-> Attention: [bs, q_head_num, max_q_len, max_q_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
+//                                            -> Broadcast: kv: [bs, q_head_num, max_k_len, head_size]
+//								-> Attention: [bs, q_head_num, max_q_len, max_k_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
 //                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len(num_tokens), hidden_size]
 //                              -> FusedAddbiasResidual: [bs, seq_len, hidden_size]
 #include <stdio.h>

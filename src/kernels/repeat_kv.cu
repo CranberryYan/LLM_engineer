@@ -19,7 +19,7 @@
 //                                            -> ConcatPastKVcache: [num_layers, bs, kv_head_num, max_seq_len(8192), head_size]
 //                                            |     cache的内容: [bs, kv_head_num, seqlen[history_len : history_len + max_q_len], head_size]
 //                                            |
-//                                            -> Broadcast: kv: [bs, q_head_num, max_q_len, head_size]
+//                                            -> Broadcast: kv: [bs, q_head_num, max_k_len, head_size]
 #include <iostream>
 #include "src/kernels/repeat_kv.h"
 
