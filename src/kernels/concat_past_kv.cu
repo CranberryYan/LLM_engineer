@@ -118,10 +118,12 @@ void launchConcatKVCache(
     int kv_head_num = k_src->shape[1];
     int max_q_len = k_src->shape[2];
     int head_size = k_src->shape[3];
-    int max_seq_len = k_dst->shape[2];
+    int max_seq_len = k_dst->shape[3];
     int block_size = head_size; //hed_size: 目前大模型一般是 256 or 128,  
     size_t layer_offset = layer * batch_size * kv_head_num * head_size * max_seq_len;
-    
+
+    printf("max_seq_len: %d\n", max_seq_len);
+    printf("max_q_len: %d\n", max_q_len);
     // 将前三维全部分配给gridDim, 专心考虑head_size该如何处理
     dim3 grid(batch_size, kv_head_num, max_q_len);
     append_key_cache<T><<<grid, block_size>>>(
@@ -133,9 +135,6 @@ void launchConcatKVCache(
         v_dst->data, layer_offset, v_src->data, kv_head_num, head_size,
         cur_query_length->data, history_length->data,
         max_q_len, max_seq_len);
-
-    printf("max_seq_len: %d\n", max_seq_len);
-    printf("max_q_len: %d\n", max_q_len);
 }
 
 template void launchConcatKVCache(

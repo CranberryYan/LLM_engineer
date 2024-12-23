@@ -50,15 +50,15 @@
 
 template<typename T>
 LLaMaContextAttentionLayer<T>::LLaMaContextAttentionLayer(int head_num, int kv_head_num, int head_size,
-		LLaMAAttentionStaticParams attn_params, cudaStream_t stream,
-		cublasWrapper *cublas_wrapper, BaseAllocator *allocator) :
-    head_num(head_num), kv_head_num(kv_head_num), head_size(head_size),
-    stream(stream), cublas_wrapper(cublas_wrapper), allocator(allocator), 
-    hidden_units(head_num * head_size), attn_static_params(attn_params),
-    q_head_per_kv(head_num / kv_head_num), scale(float(1 / sqrt(head_size))){ }
+	LLaMAAttentionStaticParams attn_params, cudaStream_t stream,
+	cublasWrapper *cublas_wrapper, BaseAllocator *allocator) :
+	head_num(head_num), kv_head_num(kv_head_num), head_size(head_size),
+	stream(stream), cublas_wrapper(cublas_wrapper), allocator(allocator), 
+	hidden_units(head_num * head_size), attn_static_params(attn_params),
+	q_head_per_kv(head_num / kv_head_num), scale(float(1 / sqrt(head_size))){ }
 
 template<typename T>
-void LLaMAContextAttentionLayer<T>::allocForForward(
+void LLaMaContextAttentionLayer<T>::allocForForward(
 	LLaMAAttentionDynParams& params) {
 	DataType type = getTensorType<T>();
 	int batch_size = params.batch_size;
@@ -119,24 +119,130 @@ void LLaMAContextAttentionLayer<T>::allocForForward(
 	qkv_buf_wo_pad_1->data= allocator->Malloc(qkv_buf_wo_pad_1->data, sizeof(T) * num_tokens * head_num * head_size, false);
 }
 
-template<typename T>    
-void LLaMAContextAttentionLayer<T>::freeBuf(){
-    allocator->Free(qkv_buf_wo_pad->data);
-    DeviceSyncAndCheckCudaError();
-    allocator->Free(q_buf_w_pad->data);
-    DeviceSyncAndCheckCudaError();
+template<typename T>
+void LLaMaContextAttentionLayer<T>::freeBuf(){
+	allocator->Free(qkv_buf_wo_pad->data);
+	DeviceSyncAndCheckCudaError();
+	allocator->Free(q_buf_w_pad->data);
+	DeviceSyncAndCheckCudaError();
 //	allocator->Free(k_buf_w_pad->data);
 //	allocator->Free(v_buf_w_pad->data);
 //	DeviceSyncAndCheckCudaError();
 //		no need to free k_buf_w_pad, v_buf_w_pad, because its included in Free(q_buf_w_pad->data)
-    allocator->Free(k_cache_buf->data);
-    DeviceSyncAndCheckCudaError();
+	allocator->Free(k_cache_buf->data);
+	DeviceSyncAndCheckCudaError();
 //	allocator->Free(v_cache_buf->data);
 //	DeviceSyncAndCheckCudaError();
 //		no need to free v_cache_buf, because its included in Free(k_cache_buf->data)
-    allocator->Free(qk_buf->data);
-    DeviceSyncAndCheckCudaError();
-    allocator->Free(qkv_buf_w_pad->data);
-    DeviceSyncAndCheckCudaError();
-    allocator->Free(qkv_buf_wo_pad_1->data);
+	allocator->Free(qk_buf->data);
+	DeviceSyncAndCheckCudaError();
+	allocator->Free(qkv_buf_w_pad->data);
+	DeviceSyncAndCheckCudaError();
+	allocator->Free(qkv_buf_wo_pad_1->data);
 }
+
+template<typename T>
+void LLaMaContextAttentionLayer<T>::forward(
+	TensorMap &inputs, TensorMap &outputs,
+	LLaMAattentionWeights<T>& weights,
+	LLaMAAttentionDynParams& params,
+	LLaMAAttentionStaticParams& static_params) {
+	printf(" =============== enter LLaMaContextAttentionLayer<T>::forward\n");
+	// alloc buf
+	allocForForward(params);
+
+	// qkv_buf_wo_pad = new TensorWrapper<T>(Device::GPU, type, {num_tokens, qkv_head_num, head_size});
+	// q_buf_w_pad = new TensorWrapper<T>(Device::GPU, type, {batch_size, head_num, max_q_len, head_size});
+	// k_buf_w_pad = new TensorWrapper<T>(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size});
+	// v_buf_w_pad = new TensorWrapper<T>(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size});
+
+	// 1. qkv linear
+	//	qkv_buf_wo_pad: [num_toknes, hidden_units]
+	//	[num_toknes, hidden_units] * [hidden_units, hidden_units]
+	Tensor *attention_input = inputs["attention_input"];
+	launchLinearGemm(attention_input->as<T>(), 
+		weights.qkv, qkv_buf_wo_pad, cublas_wrapper, false, true);
+	DeviceSyncAndCheckCudaError();
+
+	// 2. qkv bias and rope and padding
+	// max_q_len: 因为此时的qk都是从input得来
+	//	[num_tokens, hidden_units]
+	//	-> [bs, q(kv)head_num, max_q_len, head_size]
+	Tensor* padding_offset = inputs["padding_offset"];
+	Tensor *history_length = inputs["history_length"];
+	Tensor *input_length = inputs["input_length"];
+	Tensor *layer_id = inputs["layer_id"];
+	launchAddFusedQKVBiasTransposeAndRoPE(
+		q_buf_w_pad, k_buf_w_pad, v_buf_w_pad, qkv_buf_wo_pad,
+		weights.qkv, padding_offset->as<int>(), history_length->as<int>(), 
+		input_length->as<int>(), static_params);
+
+	// 3. concat past kv cache
+	//	[bs, kv_head_num, max_q_len, head_size]
+	//	-> [num_layer, bs, max_seqlen[cumsum_seq_len:cumsum_seq_len+cur_seq_len], hidden_units]
+/*
+void launchConcatKVCache(
+    TensorWrapper<T> *k_src,              // from qkv bias and rope
+    TensorWrapper<T> *v_src,
+    TensorWrapper<int> *layer_id,         // layer offset = layer_id * batchxbeam * max_seq_len * kv_head_num * head_size
+    TensorWrapper<int> *cur_query_length, // current epoch or local input length, [batchsize]
+    TensorWrapper<int> *history_length,
+    TensorWrapper<T> *k_dst, TensorWrapper<T> *v_dst)
+*/
+/*
+TensorWrapper<float>* all_k_cache = new TensorWrapper<float>(GPU, 
+	type, 
+	{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
+	d_all_k_cache);
+*/
+	Tensor* all_k_cache = outputs["all_k_cache"];
+	Tensor* all_v_cache = outputs["all_v_cache"];
+	launchConcatKVCache(k_buf_w_pad, v_buf_w_pad,
+		layer_id->as<int>(), input_length->as<int>(),
+		history_length->as<int>(), all_k_cache->as<T>(), all_v_cache->as<T>());
+	DeviceSyncAndCheckCudaError();
+
+	// 4. broadcast
+	Tensor* context_length = inputs["context_length"];
+	launchRepeatKVCache(all_k_cache->as<T>(), all_v_cache->as<T>(),
+		context_length->as<int>(), layer_id->as<int>(), k_cache_buf, v_cache_buf);
+	DeviceSyncAndCheckCudaError();
+
+	// 1. qk
+	// [bs, q_head_num, max_q_len, head_size] * [bs, q_head_num, max_k_len, head_size]
+	//	-> [bs, q_head_num, max_q_len, max_k_len]
+	launchLinearStridedBatchGemm(q_buf_w_pad, k_cache_buf,
+		qk_buf, cublas_wrapper, false, true);
+	DeviceSyncAndCheckCudaError();
+
+	// 2. scale + mask + softmax
+	Tensor* attention_mask = inputs["attention_mask"];
+	launchScaleMaskAndSoftmax(qk_buf, attention_mask->as<T>(), qk_buf, scale);
+	DeviceSyncAndCheckCudaError();
+
+	// 3. qk * v
+	// [bs, q_head_num, max_q_len, max_k_len]
+	//	-> [bs, q_head_num, max_q_len, head_size]
+	launchLinearStridedBatchGemm(qk_buf, v_cache_buf, qkv_buf_w_pad, cublas_wrapper, false, false);
+	DeviceSyncAndCheckCudaError();
+
+	// 4. transpose + reshape
+	//	[bs, q_head_num, max_q_len, head_size]
+	//	-> [bs, max_q_len, q_head_num, head_size]
+	//	-> [num_tokens, hidden_units] + remove padding
+	launchTransposeOutRemovePadding(qkv_buf_w_pad, padding_offset->as<int>(), qkv_buf_wo_pad_1);
+	DeviceSyncAndCheckCudaError();
+
+	// 5. output linear
+	//	[num_tokens, hidden_units]
+	//	-> [num_tokens, hidden_units]
+	Tensor* attention_output = outputs["attention_output"];
+	launchLinearGemm(qkv_buf_wo_pad_1, 
+		weights.output, attention_output->as<T>(), 
+		cublas_wrapper, false, true);
+	DeviceSyncAndCheckCudaError();
+
+	this->freeBuf();
+}
+
+template class LLaMaContextAttentionLayer<float>;

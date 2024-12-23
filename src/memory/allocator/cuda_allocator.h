@@ -8,9 +8,8 @@
 struct CudaBigBlock {
 public:
     CudaBigBlock() = default;
-
     CudaBigBlock(void *data, size_t size, bool is_allocated) :
-        data(data), size(size), is_allocated(is_allocated){}
+        data(data), size(size), is_allocated(is_allocated){ }
 public:
     void *data;
     size_t size;
@@ -20,7 +19,6 @@ public:
 struct CudaSmallBlock {
 public:
     CudaSmallBlock() = default;
-
     CudaSmallBlock(void *data, size_t size, bool is_allocated) :
         data(data), size(size), is_allocated(is_allocated){}
 public:
@@ -70,7 +68,7 @@ public:
         //  先去bigblocks里面找空闲的(free出来且未归还到OS)
         if (size > 1024 * 1024) {
             int block_id = -1;
-            auto BigBlocks = cudaBigBlocksMap[device_id];
+            auto &BigBlocks = cudaBigBlocksMap[device_id];
             for (int i = 0; i < BigBlocks.size(); ++i) {
                 if (BigBlocks[i].size > size && 
                     !BigBlocks[i].is_allocated && 
@@ -85,10 +83,10 @@ public:
                 BigBlocks[block_id].is_allocated = true;
                 return BigBlocks[block_id].data;
             } else { // 没找到合适的block, 自行malloc
-                void* newBuffer = (void*) ptr;
+                void *newBuffer = (void*) ptr;
                 CHECK(cudaMalloc((void**)&newBuffer, size));
                 CHECK(cudaMemset(newBuffer, 0, size));
-                BigBlocks.push_back(CudaSmallBlock(newBuffer, size, false));
+                BigBlocks.push_back(CudaBigBlock(newBuffer, size, false));
                 return newBuffer;
             }
         }
@@ -96,7 +94,7 @@ public:
         // 3. small buf
         //  先去smallblocks里面找空闲的(分配出来但是没有具体任务的内存地址)
         else {
-            auto SmallBlocks = cudaSmallBlocksMap[device_id];
+            auto &SmallBlocks = cudaSmallBlocksMap[device_id];
             for (int i = 0; i < SmallBlocks.size(); ++i) {
                 if (SmallBlocks[i].size > size && 
                     !SmallBlocks[i].is_allocated) { // 找到合适的block
@@ -133,7 +131,7 @@ public:
         for (auto &it : cudaSmallBlocksMap) {
             if (FreeSize[it.first] > 1024 * 1024 * 1024) {
                 auto &cudaBlocks = it.second;
-                std::vector<cudaSmallBlock> tmp;
+                std::vector<CudaSmallBlock> tmp;
                 for (int i = 0; i < cudaBlocks.size(); ++i) {
                     if (!cudaBlocks[i].is_allocated) {
                         cudaSetDevice(it.first);
@@ -194,4 +192,6 @@ private:
     std::map<int, size_t> FreeSize;
     std::map<int, std::vector<CudaBigBlock>> cudaBigBlocksMap;
     std::map<int, std::vector<CudaSmallBlock>> cudaSmallBlocksMap;
+    size_t total_allocated_size = 0;  
+    int dev_id;
 };

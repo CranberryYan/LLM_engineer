@@ -11,8 +11,8 @@
 // there is no concat kv cpu kernel implementation now
 // we compare the kernel correctnesss by eyes and result print infos
 // `./test_concat_kv` to test fp32 GPU kernel
-int main()
-{
+int main() {
+    const int num_layers = 1;
     const int batch_size = 1;
     const int max_q_len = 16;
     const int max_seq_len = 32;
@@ -71,6 +71,13 @@ int main()
     cudaMemcpy(dhistory_length, history_length, sizeof(int) * batch_size, cudaMemcpyHostToDevice);
     // cudaMemcpy(d_layer_id, h_layer_id, sizeof(int) * batch_size, cudaMemcpyHostToDevice);
 
+    // after RoPE: k/v: [bs, kv_head_num, max_q_len, head_size]
+	// qkv_buf_wo_pad = new TensorWrapper<T>(Device::GPU, type, {num_tokens, qkv_head_num, head_size});
+	// q_buf_w_pad = new TensorWrapper<T>(Device::GPU, type, {batch_size, head_num, max_q_len, head_size});
+	// k_buf_w_pad = new TensorWrapper<T>(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size});
+	// v_buf_w_pad = new TensorWrapper<T>(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size});
+    //  {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}
+    //  实际输出(out_k(v)dst)有num_layers这个维度
     DataType type = getTensorType<float>();
     DataType type_int = getTensorType<int>();
     TensorWrapper<float> *in_ksrc = new TensorWrapper<float>(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size}, d_k_src);
@@ -78,8 +85,8 @@ int main()
     TensorWrapper<int> *layer_id = new TensorWrapper<int>(Device::CPU, type_int, {batch_size}, h_layer_id);
     TensorWrapper<int> *cur_q_len = new TensorWrapper<int>(Device::GPU, type_int, {batch_size}, dcur_query_length);
     TensorWrapper<int> *history_len = new TensorWrapper<int>(Device::GPU, type_int, {batch_size}, dhistory_length);
-    TensorWrapper<float> *out_kdst = new TensorWrapper<float>(Device::GPU, type, {batch_size, kv_head_num, max_seq_len, head_size}, d_k_dst);
-    TensorWrapper<float> *out_vdst = new TensorWrapper<float>(Device::GPU, type, {batch_size, kv_head_num, max_seq_len, head_size}, d_v_dst);
+    TensorWrapper<float> *out_kdst = new TensorWrapper<float>(Device::GPU, type, {num_layers, batch_size, kv_head_num, max_seq_len, head_size}, d_k_dst);
+    TensorWrapper<float> *out_vdst = new TensorWrapper<float>(Device::GPU, type, {num_layers, batch_size, kv_head_num, max_seq_len, head_size}, d_v_dst);
     // debug info, better to retain: std::cout << "before launch kernel" << std::endl;
     launchConcatKVCache(in_ksrc, in_vsrc, layer_id, cur_q_len, history_len, out_kdst, out_vdst);
     // debug info, better to retain: std::cout << "after launch kernel" << std::endl;
@@ -88,8 +95,7 @@ int main()
     cudaMemcpy(h_k_dst, d_k_dst, sizeof(float) * kvcache_size, cudaMemcpyDeviceToHost);
     // debug info, better to retain: std::cout << "cuda memcpy device to host" << std::endl;
     // note: need to add offset2index and index2offset API to help us program and check result
-    // for (int i = batch_size * (1) * kv_head_num * head_size; i < batch_size * max_seq_len * kv_head_num * head_size; i++)
-    // {
+    // for (int i = batch_size * (1) * kv_head_num * head_size; i < batch_size * max_seq_len * kv_head_num * head_size; i++) {
     //     printf("index = %d\n", i);
     //     printf("res k = %f\n", h_k_dst[i]);
     //     // debug info, better to retain: printf("topK id = %d\n", id);
@@ -97,7 +103,7 @@ int main()
     //     printf("===============\n");
     //     // debug info, better to retain: printf("topK val =%f\n", val);
     // }
-    // debug info, better to retain: std::cout << "before free" << std::endl;
+    // // debug info, better to retain: std::cout << "before free" << std::endl;
     free(h_k_src);
     free(h_v_src);
     free(h_k_dst);

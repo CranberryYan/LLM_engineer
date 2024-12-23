@@ -13,7 +13,7 @@ public:
     }
 
     template<typename T>
-    void Free(T *ptr, bool is_host) {
+    void Free(T *ptr, bool is_host=false) {
         return UnifyFree((void*)ptr, is_host);
     }
 

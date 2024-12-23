@@ -9,7 +9,7 @@
 #include "src/kernels/concat_past_kv.h"
 #include "src/kernels/qkv_bias_and_RoPE.h"
 #include "src/kernels/attn_softmax_kernel.h"
-
+#include "src/kernels/fused_transpose_and_remv_pad.h"
 
 template<typename T>
 class LLaMaContextAttentionLayer
