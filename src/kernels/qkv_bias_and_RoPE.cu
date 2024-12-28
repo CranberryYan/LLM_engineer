@@ -21,6 +21,14 @@
 // 4. write back to global memory
 // 在多头注意力中, 模型的总维度(即 hidden_size)被分成多个独立的子空间, 每个子空间对应一个注意力头。
 //  每个注意力头只会处理输入的一个子空间(即一个较小的维度), 因此每个头的维度为 head_size
+// input: [num_tokens, hidden_units]
+//      int token_id = blockIdx.x;
+//      int head_id  = blockIdx.y;
+//      int token_padding_offset = padding_offset[token_id];
+//      int dst_token_id = token_id + token_padding_offset;
+//      int batch_id = dst_token_id / seq_len; // 第几个seq_len
+//  num_tokens -> bs * max_q_len
+//  hidden_units -> q_head_num * head_size
 // input:  QKV: [num_tokens, qkv_head_num, head_size]
 //         qkv bias: [qkv_head_num, head_size]
 // output: q: [bs, q_head_num, max_q_len, head_size]
@@ -94,7 +102,6 @@ __global__ void add_fusedQKV_bias_transpose_kernel(
     int head_id  = blockIdx.y;
     int tid = threadIdx.x;
     int token_padding_offset = padding_offset[token_id];
-
     int dst_token_id = token_id + token_padding_offset;
     int batch_id = dst_token_id / seq_len;          // 第几个seq_len
     int local_token_id = dst_token_id % seq_len;    // seq_len维度层面, 具体那一个token
@@ -136,12 +143,12 @@ __global__ void add_fusedQKV_bias_transpose_kernel(
     }
 }
 
-// // this kernel for self masked attention
+// // this kernel for masked self  attention
 template <typename T>
 __global__ void rope_kernel_for_self_decoder(T *q, T *k, const int batch_szie, 
     const int head_num, const int kv_head_num, const int head_size, const int step, 
     int rotary_embedding_dim, float rotary_embedding_base) {
-    
+
     int tid = threadIdx.x;
     int q_head_id = blockIdx.x;
     int q_batch_id = blockIdx.y;
@@ -183,7 +190,7 @@ void launchAddFusedQKVBiasTransposeAndRoPE(
     TensorWrapper<T> *q_buf, TensorWrapper<T> *k_buf, TensorWrapper<T> *v_buf,
     TensorWrapper<T> *QKV, BaseWeight<T> &qkv,
     TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
-    LLaMAAttentionStaticParams &params) {
+    LLaMaAttentionStaticParams &params) {
     int token_num = QKV->shape[0];
     int qkv_head_num = QKV->shape[1];
     int head_size = QKV->shape[2];
@@ -204,10 +211,10 @@ void launchAddFusedQKVBiasTransposeAndRoPE(
             params.max_position_embeddings, params.use_dynamic_ntk);
 }
 
-// this launch for self masked attention
+// this launch for masked self  attention
 template<typename T>
 void launchRoPE(TensorWrapper<T> *qkv_buf, TensorWrapper<int> *step, 
-    LLaMAAttentionStaticParams &static_params) {
+    LLaMaAttentionStaticParams &static_params) {
     const int batch_size = qkv_buf->shape[0];
     const int qkv_head_num = qkv_buf->shape[1];
     const int head_num = 32; // only for llama2
@@ -236,13 +243,13 @@ template void launchAddFusedQKVBiasTransposeAndRoPE(
     TensorWrapper<float> *q_buf, TensorWrapper<float> *k_buf, TensorWrapper<float> *v_buf,
     TensorWrapper<float> *QKV, BaseWeight<float> &qkv,
     TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
-    LLaMAAttentionStaticParams &params);
+    LLaMaAttentionStaticParams &params);
 // template void launchAddFusedQKVBiasTransposeAndRoPE(
 //             TensorWrapper<half> *q_buf, TensorWrapper<half> *k_buf, TensorWrapper<half> *v_buf,
 //             TensorWrapper<half> *QKV, BaseWeight<half> &qkv,
 //             TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
-//             LLaMAAttentionStaticParams &params);
+//             LLaMaAttentionStaticParams &params);
 
 template void launchRoPE(
     TensorWrapper<float>* qkv_buf, TensorWrapper<int>* step,
-    LLaMAAttentionStaticParams& static_params);
+    LLaMaAttentionStaticParams& static_params);

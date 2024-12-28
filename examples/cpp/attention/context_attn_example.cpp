@@ -12,14 +12,14 @@ int main(int argc, char** argv) {
     int max_seq_len = 12; // max context length for kv cache
     int hidden_units = (head_num + 2 * kv_head_num) * head_size;
     int q_hidden_units = head_num * head_size;
-    LLaMAAttentionStaticParams attn_static_params;
+    LLaMaAttentionStaticParams attn_static_params;
     attn_static_params.rotary_embedding_dim = 128;
     attn_static_params.rotary_embedding_base = 10000;
     attn_static_params.max_position_embeddings = 2048;
     attn_static_params.use_dynamic_ntk = false; // for dyn scaling rope
-    LLaMAAttentionDynParams attn_dyn_params;
+    LLaMaAttentionDynParams attn_dyn_params;
     attn_dyn_params.batch_size = 2;
-    attn_dyn_params.num_tokens = 14;
+    attn_dyn_params.num_tokens = 14; // 一共14个token, 其中一句话有8个token, 剩下一句有6个token
     attn_dyn_params.max_q_len = 8;
     attn_dyn_params.max_k_len = 8; // max actual context length for cur batch
     bool is_free_buffer_after_fwd = true;
@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
         {"all_v_cache", all_v_cache}
     };
     // weights are initialized in its constructor, see cpp/models/bert//bertlayerweight.cc
-    LLaMAattentionWeights<float> ctx_attn_weights;
+    LLaMaAttentionWeights<float> ctx_attn_weights;
     WeightType wtype = getWeightType<float>();
     ctx_attn_weights.qkv.data = d_qkv_weights;
     ctx_attn_weights.qkv.shape = {q_hidden_units, hidden_units};

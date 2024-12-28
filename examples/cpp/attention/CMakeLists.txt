@@ -7,11 +7,11 @@ target_link_libraries(CtxAttnExample PUBLIC
     -lcudart
     -lcudadevrt
     LlamaCtxAttn)
-# add_executable(selfAttnExample self_attn_example.cpp)
-# set_property(TARGET selfAttnExample PROPERTY POSITION_INDEPENDENT_CODE  ON)
-# set_property(TARGET selfAttnExample PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
-# target_link_libraries(selfAttnExample PUBLIC
-#     -lcudart
-#     -lcudadevrt                             
-#     LlamaselfAttn
-#     linear_lib)
+add_executable(selfAttnExample self_attn_example.cpp)
+set_property(TARGET selfAttnExample PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET selfAttnExample PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+target_link_libraries(selfAttnExample PUBLIC
+    -lcudart
+    -lcudadevrt                             
+    LlamaselfAttn
+    linear_lib)

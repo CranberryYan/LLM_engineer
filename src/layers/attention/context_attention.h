@@ -16,22 +16,22 @@ class LLaMaContextAttentionLayer
 {
 public:
 	LLaMaContextAttentionLayer(int head_num, int kv_head_size, int head_size,
-		LLaMAAttentionStaticParams attn_params, cudaStream_t stream,
+		LLaMaAttentionStaticParams attn_params, cudaStream_t stream,
 		cublasWrapper *cublas_wrapper, BaseAllocator *allocator);
 
 public:
-    void allocForForward(LLaMAAttentionDynParams& params);
+    void allocForForward(LLaMaAttentionDynParams& params);
     
 		void freeBuf(); // free 中间buf
     
 		void forward(TensorMap& inputs, TensorMap& outputs, 
-			LLaMAattentionWeights<T>& weights, 
-			LLaMAAttentionDynParams& params, 
-			LLaMAAttentionStaticParams& static_params);
+			LLaMaAttentionWeights<T>& weights, 
+			LLaMaAttentionDynParams& params, 
+			LLaMaAttentionStaticParams& static_params);
 
 	// 返回的是 attn_static_params 的引用,
 	//	即调用此函数时不会复制 attn_static_params, 而是直接返回对原变量的访问
-	LLaMAAttentionStaticParams& GetAttnStaticParams(){
+	LLaMaAttentionStaticParams& GetAttnStaticParams(){
 			return attn_static_params;
 	}
 
@@ -44,7 +44,7 @@ private:
 	float scale;							// sqrt(head_size)
 
 	cudaStream_t stream;
-	LLaMAAttentionStaticParams attn_static_params;
+	LLaMaAttentionStaticParams attn_static_params;
 	BaseAllocator *allocator;
 	cublasWrapper *cublas_wrapper;
 

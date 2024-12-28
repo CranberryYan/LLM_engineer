@@ -234,7 +234,7 @@ bool CheckResult(float *CPUoutput, T *GPUoutput, int output_size)
 //     TensorWrapper<dtype> *mha_output = new TensorWrapper<dtype>(GPU, type, {batch_size, num_heads, head_size}, d_o);                  \
 //     BaseWeight<dtype> qkv_weight;                                                                                                     \
 //     qkv_weight.bias = d_qkv_bias;                                                                                                     \
-//     LLaMAAttentionStaticParams params;                                                                                                \
+//     LLaMaAttentionStaticParams params;                                                                                                \
 //     params.rotary_embedding_dim = rotary_embedding_dim;                                                                               \
 //     params.rotary_embedding_base = rotary_embedding_base;                                                                             \
 //     params.max_position_embeddings = max_position_embeddings;                                                                         \
@@ -383,7 +383,7 @@ int main(int argc, char *argv[])
     TensorWrapper<float> *mha_output = new TensorWrapper<float>(GPU, type, {batch_size, num_heads, head_size}, d_o);                             
     BaseWeight<float> qkv_weight;                                                                                                                
     qkv_weight.bias = d_qkv_bias;                                                                                                                
-    LLaMAAttentionStaticParams params;                                                                                                           
+    LLaMaAttentionStaticParams params;                                                                                                           
     params.rotary_embedding_dim = rotary_embedding_dim;                                                                                          
     params.rotary_embedding_base = rotary_embedding_base;                                                                                        
     params.max_position_embeddings = max_position_embeddings;                                                                                    

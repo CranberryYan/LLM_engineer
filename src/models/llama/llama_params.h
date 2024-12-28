@@ -1,12 +1,12 @@
 #pragma once
-struct LLaMAAttentionStaticParams {
+struct LLaMaAttentionStaticParams {
     int		rotary_embedding_dim;
     float	rotary_embedding_base;
     int		max_position_embeddings;
     bool	use_dynamic_ntk;
 };
 
-struct LLaMAAttentionDynParams {
+struct LLaMaAttentionDynParams {
     int batch_size;
     int num_tokens;
     int max_q_len;

@@ -51,7 +51,7 @@
 
 template<typename T>
 LLaMaContextAttentionLayer<T>::LLaMaContextAttentionLayer(int head_num, int kv_head_num, int head_size,
-	LLaMAAttentionStaticParams attn_params, cudaStream_t stream,
+	LLaMaAttentionStaticParams attn_params, cudaStream_t stream,
 	cublasWrapper *cublas_wrapper, BaseAllocator *allocator) :
 	head_num(head_num), kv_head_num(kv_head_num), head_size(head_size),
 	stream(stream), cublas_wrapper(cublas_wrapper), allocator(allocator), 
@@ -60,20 +60,20 @@ LLaMaContextAttentionLayer<T>::LLaMaContextAttentionLayer(int head_num, int kv_h
 
 template<typename T>
 void LLaMaContextAttentionLayer<T>::allocForForward(
-	LLaMAAttentionDynParams& params) {
+	LLaMaAttentionDynParams& params) {
 	DataType type = getTensorType<T>();
-	int batch_size = params.batch_size;
-	int num_tokens = params.num_tokens;
-	int max_q_len = params.max_q_len;
-	int max_k_len = params.max_k_len;
+	const int batch_size = params.batch_size;
+	const int num_tokens = params.num_tokens;
+	const int max_q_len = params.max_q_len;
+	const int max_k_len = params.max_k_len;
 	const int qkv_head_num = head_num + 2 * kv_head_num;
 
 	// qkv linear and bias rope
 	// why here isn't max_k_len(all max_q_len)?
 	//	cause the q/k/v is got by {bs, q_len, hiddenunits} * {hiddenunits, hiddenunits}
 	//  -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_size]
-	//																						 |
-	//																						 -> [bs, q_head_num, max_q_len, head_size]
+	//											   |
+	//											   -> [bs, q_head_num, max_q_len, head_size]
 	//                                             |
 	//                                             -> [bs, kv_head_num, max_q_len, head_size]
 	//                                             |
@@ -145,9 +145,9 @@ void LLaMaContextAttentionLayer<T>::freeBuf(){
 template<typename T>
 void LLaMaContextAttentionLayer<T>::forward(
 	TensorMap &inputs, TensorMap &outputs,
-	LLaMAattentionWeights<T>& weights,
-	LLaMAAttentionDynParams& params,
-	LLaMAAttentionStaticParams& static_params) {
+	LLaMaAttentionWeights<T>& weights,
+	LLaMaAttentionDynParams& params,
+	LLaMaAttentionStaticParams& static_params) {
 	printf(" =============== enter LLaMaContextAttentionLayer<T>::forward\n");
 	// alloc buf
 	allocForForward(params);

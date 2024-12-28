@@ -319,7 +319,7 @@ void launchDecoderMaskedMHA(TensorWrapper<T> *qkv_buf, BaseWeight<T> &qkv,
     TensorWrapper<bool> *finished,  // 生成token是否结束
     TensorWrapper<int> *step,       // 生成到第几个token
     TensorWrapper<T> *mha_output,   // 输出
-    LLaMAAttentionStaticParams &static_params/*关于RoPE的参数*/) {
+    LLaMaAttentionStaticParams &static_params/*关于RoPE的参数*/) {
 
     // 输入: qkv_buf: 来自于qkv_linear的输出
     // qkv:  qkv_linear的weight中的bias
@@ -368,9 +368,9 @@ void launchDecoderMaskedMHA(TensorWrapper<T> *qkv_buf, BaseWeight<T> &qkv,
 template void launchDecoderMaskedMHA(TensorWrapper<float>* qkv_buf, BaseWeight<float>& qkv,
     TensorWrapper<int>* layer_id, TensorWrapper<float>* k_cache, TensorWrapper<float>* v_cache,
     TensorWrapper<bool>* finished, TensorWrapper<int>* step, TensorWrapper<float>* mha_output,
-    LLaMAAttentionStaticParams& static_params);
+    LLaMaAttentionStaticParams& static_params);
 
 template void launchDecoderMaskedMHA(TensorWrapper<half>* qkv_buf, BaseWeight<half>& qkv,
     TensorWrapper<int>* layer_id, TensorWrapper<half>* k_cache, TensorWrapper<half>* v_cache,
     TensorWrapper<bool>* finished, TensorWrapper<int>* step, TensorWrapper<half>* mha_output,
-    LLaMAAttentionStaticParams& static_params);
+    LLaMaAttentionStaticParams& static_params);

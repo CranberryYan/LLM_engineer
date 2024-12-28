@@ -9,7 +9,7 @@ def read_tensor(filename, shape, dtype=np.float32):
     return tensor
 
 # Example Usage
-filename = "/home/yst/文档/yst/LLM/熊猫老师/my_LLM_engineering/data_tmp/0_q_buf_after_rope.bin"
+filename = "/home/yst/文档/yst/LLM/熊猫老师/my_LLM_engineering/data_tmp/0_qk_v_buf_after_bmm.bin"
 Bm, Bk = 8, 64  # Replace with the correct dimensions
 tensor = read_tensor(filename, shape=(Bm, Bk))
 
