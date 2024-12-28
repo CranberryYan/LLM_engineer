@@ -31,8 +31,9 @@
 //                                            |
 //                                            -> Broadcast: kv: [bs, q_head_num, max_k_len, head_size]
 //								-> Attention: [bs, q_head_num, max_q_len, max_k_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
-//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len(num_tokens), hidden_size]
-//                              -> FusedAddbiasResidual: [bs, seq_len, hidden_size]
+//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len, hidden_size](bs*seq_len = num_tokens)
+//                                  -> [num_tokens, hidden_size]
+//                              -> FusedAddbiasResidual: [num_tokens, hidden_size]
 
 #include <math.h>
 #include "src/utils/debug_utils.h"

@@ -56,7 +56,7 @@ void launchLinearGemm(TensorWrapper<T>* input, BaseWeight<T> &weight,
 
     int lda = Am;
     int ldb = Bk;
-    int ldc = Am;
+    int ldc = Cm;
 
     // trans_b: 将A转置(weight)
     cublasOperation_t transA = trans_b ? CUBLAS_OP_T : CUBLAS_OP_N;

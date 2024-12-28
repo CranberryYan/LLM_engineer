@@ -15,10 +15,11 @@
 //                                            |
 //                                            -> Broadcast: kv: [bs, q_head_num, max_k_len, head_size]
 //								-> Attention: [bs, q_head_num, max_q_len, max_k_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
-//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len, hidden_size]
+//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len, hidden_size](bs*seq_len = num_tokens)
+//                                  -> [num_tokens, hidden_size]
+
 #include <iostream>
 #include "src/kernels/fused_transpose_and_remv_pad.h"
-
 
 // [bs, head_num, seq_len, head_size] -> [bs, seq_len, head_num, head_size] 
 //  -> [num_tokens, head_num, head_size]

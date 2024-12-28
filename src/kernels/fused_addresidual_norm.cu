@@ -15,8 +15,9 @@
 //                                            |
 //                                            -> Broadcast: kv: [bs, q_head_num, max_k_len, head_size]
 //								-> Attention: [bs, q_head_num, max_q_len, max_k_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
-//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len(num_tokens), hidden_size]
-//                              -> FusedAddbiasResidual: [bs, seq_len, hidden_size]
+//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len, hidden_size](bs*seq_len = num_tokens)
+//                                  -> [num_tokens, hidden_size]
+//                              -> FusedAddbiasResidual: [num_tokens, hidden_size]
 #include <stdio.h>
 #include "src/kernels/fused_addresidual_norm.h"
 
@@ -67,10 +68,8 @@ __global__ void FusedAddBiasResidualRMSNorm(
     T* decoder_in, // int&out: [num tokens, q_hidden_units]
     /*optional*/T* bias,  // [hidden_units]
     T* scale,             // [hidden_units], RMSNorm weights
-    float eps, int num_tokens, int hidden_units)
-{
+    float eps, int num_tokens, int hidden_units) {
     int batch_id = blockIdx.x;
-
     int vec_size = Vec<T>::size; // size: static, 无需将类实例化, 可以调用, 2 or 4
     using Vec_t = typename Vec<T>::Type;
 
@@ -133,19 +132,16 @@ __global__ void FusedAddBiasResidualRMSNorm(
 
 template<typename T>
 void launchFusedAddBiasResidualRMSNorm(
-        TensorWrapper<T> *residual, 
-        TensorWrapper<T> *decoder_in,
-        BaseWeight<T>& norm,
-        T* scale,
-        float eps)
-{
+    TensorWrapper<T> *residual, 
+    TensorWrapper<T> *decoder_in,
+    BaseWeight<T>& norm, T* scale, float eps) {
     T *bias = norm.bias;
     int num_tokens = decoder_in->shape[0];
     int hidden_units = decoder_in->shape[1];
     int num_thread = std::min<int>(hidden_units / 4, 1024); // assume head size can be divided by 4 and 2
+    
     dim3 grid(num_tokens);
     dim3 block(num_thread);
-
     printf("calling FusedAddResidualAndRMSNorm\n");
     FusedAddBiasResidualRMSNorm<T><<<grid, block>>>
         (residual->data, decoder_in->data, bias,

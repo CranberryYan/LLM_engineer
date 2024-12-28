@@ -15,8 +15,9 @@
 //                                            |
 //                                            -> Broadcast: kv: [bs, q_head_num, max_k_len, head_size]
 //								-> Attention: [bs, q_head_num, max_q_len, max_k_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
-//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len(num_tokens), hidden_size]
-//                              -> FusedAddbiasResidual: [bs, seq_len, hidden_size]
+//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len, hidden_size](bs*seq_len = num_tokens)
+//                                  -> [num_tokens, hidden_size]
+//                              -> FusedAddbiasResidual: [num_tokens, hidden_size]
 
 // fusedQkvGemm -> AddbiasAndPaddingAndRope -> ConcatPastKVcache -> broadcast(GQA or MQA)(Llama2: MHA, 无broadcast)
 //  -> Qk gemm -> FusedMaskAndScaleSoftmax
@@ -78,46 +79,65 @@ void LLaMaContextAttentionLayer<T>::allocForForward(
 	//                                             -> [bs, kv_head_num, max_q_len, head_size]
 	//                                             |
 	//                                             -> [bs, kv_head_num, max_q_len, head_size]
-	qkv_buf_wo_pad = new TensorWrapper<T>(Device::GPU, type, {num_tokens, qkv_head_num, head_size});
-	q_buf_w_pad = new TensorWrapper<T>(Device::GPU, type, {batch_size, head_num, max_q_len, head_size});
-	k_buf_w_pad = new TensorWrapper<T>(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size});
-	v_buf_w_pad = new TensorWrapper<T>(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size});
+	qkv_buf_wo_pad = new TensorWrapper<T>(Device::GPU, type,
+		{num_tokens, qkv_head_num, head_size});
+	q_buf_w_pad = new TensorWrapper<T>(Device::GPU, type,
+		{batch_size, head_num, max_q_len, head_size});
+	k_buf_w_pad = new TensorWrapper<T>(Device::GPU, type,
+		{batch_size, kv_head_num, max_q_len, head_size});
+	v_buf_w_pad = new TensorWrapper<T>(Device::GPU, type,
+		{batch_size, kv_head_num, max_q_len, head_size});
 
 	// transpose kv cache
 	// why not kv_head_num?
 	//	need repeat kv to adapt q head num
 	// -> Broadcast: kv: [bs, q_head_num, max_k_len, head_size]
 	//	如果MHA, 无需Broadcast
-	k_cache_buf = new TensorWrapper<T>(Device::GPU, type, {batch_size, head_num, max_k_len, head_size});
-	v_cache_buf = new TensorWrapper<T>(Device::GPU, type, {batch_size, head_num, max_k_len, head_size});
+	k_cache_buf = new TensorWrapper<T>(Device::GPU, type,
+		{batch_size, head_num, max_k_len, head_size});
+	v_cache_buf = new TensorWrapper<T>(Device::GPU, type,
+		{batch_size, head_num, max_k_len, head_size});
 
 	// q*k softmax qk * v
 	// Attention: [bs, q_head_num, max_q_len, max_k_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
-	qk_buf = new TensorWrapper<T>(Device::GPU, type, {batch_size, head_num, max_q_len, max_k_len});
-	qkv_buf_w_pad = new TensorWrapper<T>(Device::GPU, type, {batch_size, head_num, max_q_len, head_size});
+	qk_buf = new TensorWrapper<T>(Device::GPU, type,
+		{batch_size, head_num, max_q_len, max_k_len});
+	qkv_buf_w_pad = new TensorWrapper<T>(Device::GPU, type,
+		{batch_size, head_num, max_q_len, head_size});
 
 	// remove padding
-	qkv_buf_wo_pad_1 = new TensorWrapper<T>(Device::GPU, type, {num_tokens, head_num, head_size});
+	qkv_buf_wo_pad_1 = new TensorWrapper<T>(Device::GPU, type,
+		{num_tokens, head_num, head_size});
 
 	qkv_buf_wo_pad->data = allocator->Malloc(
-		qkv_buf_wo_pad->data, sizeof(T) * num_tokens * qkv_head_num * head_size, false);
+		qkv_buf_wo_pad->data,
+		sizeof(T) * num_tokens * qkv_head_num * head_size, false);
 	q_buf_w_pad->data = allocator->Malloc(
-		q_buf_w_pad->data, sizeof(T) * qkv_head_num * batch_size * max_q_len * head_size, false);
-	k_buf_w_pad->data = (T*)q_buf_w_pad->data + head_num * batch_size * max_q_len * head_size;
-	v_buf_w_pad->data = (T*)k_buf_w_pad->data + kv_head_num * batch_size * max_q_len * head_size;
+		q_buf_w_pad->data,
+		sizeof(T) * qkv_head_num * batch_size * max_q_len * head_size, false);
+	k_buf_w_pad->data = (T*)q_buf_w_pad->data +
+		head_num * batch_size * max_q_len * head_size;
+	v_buf_w_pad->data = (T*)k_buf_w_pad->data +
+		kv_head_num * batch_size * max_q_len * head_size;
 
 	k_cache_buf->data = allocator->Malloc(
-			k_cache_buf->data, 2 * sizeof(T) * batch_size * head_num * max_k_len * head_size, false);
-	v_cache_buf->data = (T*)k_cache_buf->data + batch_size * head_num * max_k_len * head_size;
+		k_cache_buf->data,
+		2 * sizeof(T) * batch_size * head_num * max_k_len * head_size, false);
+	v_cache_buf->data = (T*)k_cache_buf->data +
+		batch_size * head_num * max_k_len * head_size;
 
 	// store qk and inplace store softmax output
 	qk_buf->data =
-			allocator->Malloc(qk_buf->data, sizeof(T) * batch_size * head_num * max_q_len * max_k_len, false);
+		allocator->Malloc(qk_buf->data,
+		sizeof(T) * batch_size * head_num * max_q_len * max_k_len, false);
 
 	// store qk*v
 	qkv_buf_w_pad->data = allocator->Malloc(
-			qkv_buf_w_pad->data, sizeof(T) * batch_size * max_q_len * head_num * head_size, false);
-	qkv_buf_wo_pad_1->data= allocator->Malloc(qkv_buf_wo_pad_1->data, sizeof(T) * num_tokens * head_num * head_size, false);
+		qkv_buf_w_pad->data,
+		sizeof(T) * batch_size * max_q_len * head_num * head_size, false);
+	qkv_buf_wo_pad_1->data= allocator->Malloc(
+		qkv_buf_wo_pad_1->data,
+		sizeof(T) * num_tokens * head_num * head_size, false);
 }
 
 template<typename T>
