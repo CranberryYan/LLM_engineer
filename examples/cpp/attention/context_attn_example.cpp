@@ -119,49 +119,49 @@ int main(int argc, char** argv) {
     DataType type = getTensorType<float>(); // note: the type should be as a class data member!
     DataType type_int = getTensorType<int>();
     TensorWrapper<float>* attention_input = new TensorWrapper<float>(GPU, 
-                                                                    type, 
-                                                                    {attn_dyn_params.num_tokens, q_hidden_units}, 
-                                                                    d_attention_input);
+        type, 
+        {attn_dyn_params.num_tokens, q_hidden_units}, 
+        d_attention_input);
     TensorWrapper<float>* qkv_bias = new TensorWrapper<float>(GPU, 
-                                                              type, 
-                                                              {hidden_units}, 
-                                                              d_qkv_bias);
+        type, 
+        {hidden_units}, 
+        d_qkv_bias);
     TensorWrapper<int>* padding_offset = new TensorWrapper<int>(GPU, 
-                                                              type_int, 
-                                                              {attn_dyn_params.num_tokens}, 
-                                                              d_padding_offset);
+        type_int, 
+        {attn_dyn_params.num_tokens}, 
+        d_padding_offset);
     TensorWrapper<int>* history_length = new TensorWrapper<int>(GPU, 
-                                                              type_int, 
-                                                              {attn_dyn_params.batch_size}, 
-                                                              d_history_len);
+        type_int, 
+        {attn_dyn_params.batch_size}, 
+        d_history_len);
     TensorWrapper<int>* input_length = new TensorWrapper<int>(GPU, 
-                                                              type_int, 
-                                                              {attn_dyn_params.batch_size}, 
-                                                              d_input_len);
+        type_int, 
+        {attn_dyn_params.batch_size}, 
+        d_input_len);
     TensorWrapper<int>* layer_id = new TensorWrapper<int>(CPU, 
-                                                              type_int, 
-                                                              {1}, 
-                                                              &h_layer_id);
+        type_int, 
+        {1}, 
+        &h_layer_id);
     TensorWrapper<int>* context_length = new TensorWrapper<int>(GPU, 
-                                                              type_int, 
-                                                              {attn_dyn_params.batch_size}, 
-                                                              d_ctx_len);
+        type_int, 
+        {attn_dyn_params.batch_size}, 
+        d_ctx_len);
     TensorWrapper<float>* attention_mask = new TensorWrapper<float>(GPU, 
-                                                              type, 
-                                                              {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, 
-                                                              d_mask);
+        type, 
+        {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, 
+        d_mask);
     TensorWrapper<float>* attention_output = new TensorWrapper<float>(GPU, 
-                                                              type, 
-                                                              {attn_dyn_params.num_tokens, q_hidden_units}, 
-                                                              d_attention_output);
+        type, 
+        {attn_dyn_params.num_tokens, q_hidden_units}, 
+        d_attention_output);
     TensorWrapper<float>* all_k_cache = new TensorWrapper<float>(GPU, 
-                                                              type, 
-                                                              {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
-                                                              d_all_k_cache);
+        type, 
+        {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
+        d_all_k_cache);
     TensorWrapper<float>* all_v_cache = new TensorWrapper<float>(GPU, 
-                                                              type, 
-                                                              {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
-                                                              d_all_v_cache);
+        type, 
+        {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
+        d_all_v_cache);
     LLM_CHECK_WITH_INFO(attention_input->data != nullptr, "tensor inserted in tensormap is nullptr data!");
     LLM_CHECK_WITH_INFO(qkv_bias->data != nullptr, "tensor inserted in tensormap is nullptr data!");
     LLM_CHECK_WITH_INFO(padding_offset->data != nullptr, "tensor inserted in tensormap is nullptr data!");

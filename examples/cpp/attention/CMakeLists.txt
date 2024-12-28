@@ -14,4 +14,4 @@ target_link_libraries(CtxAttnExample PUBLIC
 #     -lcudart
 #     -lcudadevrt                             
 #     LlamaselfAttn
-#     linear)
+#     linear_lib)

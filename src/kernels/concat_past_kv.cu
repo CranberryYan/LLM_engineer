@@ -118,8 +118,8 @@ void launchConcatKVCache(
     int kv_head_num = k_src->shape[1];
     int max_q_len = k_src->shape[2];
     int head_size = k_src->shape[3];
-    int max_seq_len = k_dst->shape[3];
-    int block_size = head_size; //hed_size: 目前大模型一般是 256 or 128,  
+    int max_seq_len = k_dst->shape[3];  // kv_cache: [num_layers, bs, kv_head_num, max_seq_len(8192), head_size] 
+    int block_size = head_size;         // head_size: 目前大模型一般是 256 or 128,  
     size_t layer_offset = layer * batch_size * kv_head_num * head_size * max_seq_len;
 
     printf("max_seq_len: %d\n", max_seq_len);

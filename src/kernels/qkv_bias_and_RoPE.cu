@@ -69,6 +69,7 @@ inline __device__ float2 GetRoPEres(float data, float data_rotate, const float2 
     return rot_v;
 }
 
+// this kernel for context attention
 template <typename T>
 __global__ void add_fusedQKV_bias_transpose_kernel(
     T *q_buf, T *k_buf, T *v_buf, T *QKV,
@@ -135,6 +136,7 @@ __global__ void add_fusedQKV_bias_transpose_kernel(
     }
 }
 
+// // this kernel for self masked attention
 template <typename T>
 __global__ void rope_kernel_for_self_decoder(T *q, T *k, const int batch_szie, 
     const int head_num, const int kv_head_num, const int head_size, const int step, 
@@ -175,6 +177,7 @@ __global__ void rope_kernel_for_self_decoder(half *q, half*k,
 // input: [num_tokens, hidden_size]
 // output: q: [bs, head_num, max_q_len, head size]
 //       k/v: [bs, kv head_num, max_q_len, head size]
+// this launch for context attention
 template <typename T>
 void launchAddFusedQKVBiasTransposeAndRoPE(
     TensorWrapper<T> *q_buf, TensorWrapper<T> *k_buf, TensorWrapper<T> *v_buf,
@@ -201,6 +204,34 @@ void launchAddFusedQKVBiasTransposeAndRoPE(
             params.max_position_embeddings, params.use_dynamic_ntk);
 }
 
+// this launch for self masked attention
+template<typename T>
+void launchRoPE(TensorWrapper<T> *qkv_buf, TensorWrapper<int> *step, 
+    LLaMAAttentionStaticParams &static_params) {
+    const int batch_size = qkv_buf->shape[0];
+    const int qkv_head_num = qkv_buf->shape[1];
+    const int head_num = 32; // only for llama2
+    const int head_size = qkv_buf->shape[2];
+    const int cur_step = step->getVal();
+    LLM_CHECK(batch_size == 1);
+    LLM_CHECK(qkv_head_num == 96);
+    LLM_CHECK(head_size == 128);
+    T *qkv_data = qkv_buf->data;
+    T *q = qkv_data;
+    T *k = qkv_data + head_num * head_size;
+
+    int   rotary_embedding_dim = static_params.rotary_embedding_dim;
+    float rotary_embedding_base = static_params.rotary_embedding_base;
+    int   max_position_embeddings = static_params.max_position_embeddings;
+    dim3 grid(head_num, batch_size);
+    dim3 block(head_size);
+
+    // MHA: q_head_num == kv_head_num
+    rope_kernel_for_self_decoder<T><<<grid, block>>>(
+        q, k, batch_size, head_num, head_num, head_size,
+        cur_step, rotary_embedding_dim, rotary_embedding_base);
+}
+
 template void launchAddFusedQKVBiasTransposeAndRoPE(
     TensorWrapper<float> *q_buf, TensorWrapper<float> *k_buf, TensorWrapper<float> *v_buf,
     TensorWrapper<float> *QKV, BaseWeight<float> &qkv,
@@ -211,3 +242,7 @@ template void launchAddFusedQKVBiasTransposeAndRoPE(
 //             TensorWrapper<half> *QKV, BaseWeight<half> &qkv,
 //             TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
 //             LLaMAAttentionStaticParams &params);
+
+template void launchRoPE(
+    TensorWrapper<float>* qkv_buf, TensorWrapper<int>* step,
+    LLaMAAttentionStaticParams& static_params);

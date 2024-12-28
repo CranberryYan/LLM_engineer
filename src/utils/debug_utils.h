@@ -54,6 +54,7 @@ void save_tensor(TensorWrapper<T>* input, std::string filename, TensorWrapper<in
     cudaMemcpy(icpu, input->data, sizeof(T) * Bm * Bk, cudaMemcpyDeviceToHost);
     std::ofstream F;
     std::cout << "saving intermediate tensor in " << filename << "\n";
+    std::cout << "Bm: " << Bm << "   Bk: " << Bk << std::endl;
     F.open("/home/yst/文档/yst/LLM/熊猫老师/my_LLM_engineering/data_tmp/" + std::to_string(id) + "_" + filename, std::ofstream::binary);
     F.write(reinterpret_cast<const char*>(icpu), sizeof(T)*Bm*Bk);
     F.close();

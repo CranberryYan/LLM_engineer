@@ -46,6 +46,7 @@
 
 #include <math.h>
 #include "src/utils/macro.h"
+#include "src/utils/debug_utils.h"
 #include "src/layers/attention/context_attention.h"
 
 template<typename T>
@@ -207,7 +208,10 @@ TensorWrapper<float>* all_k_cache = new TensorWrapper<float>(GPU,
 	launchRepeatKVCache(all_k_cache->as<T>(), all_v_cache->as<T>(),
 		context_length->as<int>(), layer_id->as<int>(), k_cache_buf, v_cache_buf);
 	DeviceSyncAndCheckCudaError();
-
+#if 1
+    save_tensor(k_cache_buf ,"k_buf_after_repeat.bin", layer_id->as<int>()); //{batch_size, head_num, max_k_len, head_size}
+#else
+#endif
 	// 1. qk
 	// [bs, q_head_num, max_q_len, head_size] * [bs, q_head_num, max_k_len, head_size]
 	//	-> [bs, q_head_num, max_q_len, max_k_len]
@@ -225,7 +229,10 @@ TensorWrapper<float>* all_k_cache = new TensorWrapper<float>(GPU,
 	//	-> [bs, q_head_num, max_q_len, head_size]
 	launchLinearStridedBatchGemm(qk_buf, v_cache_buf, qkv_buf_w_pad, cublas_wrapper, false, false);
 	DeviceSyncAndCheckCudaError();
-
+#if 1
+    save_tensor(qkv_buf_w_pad ,"qk_v_buf_after_bmm.bin", layer_id->as<int>()); // {batch_size, head_num, max_q_len, head_size}
+#else
+#endif
 	// 4. transpose + reshape
 	//	[bs, q_head_num, max_q_len, head_size]
 	//	-> [bs, max_q_len, q_head_num, head_size]
@@ -241,6 +248,11 @@ TensorWrapper<float>* all_k_cache = new TensorWrapper<float>(GPU,
 		weights.output, attention_output->as<T>(), 
 		cublas_wrapper, false, true);
 	DeviceSyncAndCheckCudaError();
+
+#if 1
+    save_tensor(attention_output->as<T>() ,"out_linear_output.bin", layer_id->as<int>()); // {num_tokens, head_num, head_size}
+#else
+#endif
 
 	this->freeBuf();
 }
