@@ -11,14 +11,14 @@ kv_cache出现动机:
     80 * 8192(max_seq_len) * 4096(hidden_units or num_heads * head_size) * 8 * 2Byte(FP16) = 40GB
 */
 
-// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_units](num_tokens: bs * q_len, q_len: 单个句子中的token集合, bs: 句子)
 //                              |
-//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              -> cal_paddingoffset: [bs, max_q_len, hidden_units]
 //                              |
-//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              -> build_casual_mask: mask: [bs, max_q_len, max_k_len]
 //                              |
-//                              -> RMSNorm: [num_tokens, hidden_size] -> fusedQkvGemm: * [hidden_size, hidden_size] -> [num_tokens, hidden_size]
-//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_size] -> [bs, q_head_num, max_q_len, head_size]  ->
+//                              -> RMSNorm: [num_tokens, hidden_units] -> fusedQkvGemm: * [hidden_units, hidden_units] -> [num_tokens, hidden_units]
+//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_units] -> [bs, q_head_num, max_q_len, head_size]  ->
 //                                            |                                       |
 //                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
 //                                            |                                       |

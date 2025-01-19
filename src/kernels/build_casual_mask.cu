@@ -1,10 +1,10 @@
 // 防止模型"作弊"
 
-// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_units](num_tokens: bs * q_len, q_len: 单个句子中的token集合, bs: 句子)
 //                              |
-//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              -> cal_paddingoffset: [bs, max_q_len, hidden_units]
 //                              |
-//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens] 
+//                              -> build_casual_mask: mask: [bs, max_q_len, max_k_len]
 #include "src/kernels/build_casual_mask.h"
 
 /*
@@ -34,9 +34,9 @@ q: 3(当前序列)   k: 6(全部上下文)
 // mask: [bs, max_q_len, max_k_len]
 template<typename T>
 __global__ void BuildCausalMasksConsideringContextPastKV(
-    T* mask,            // mask: [bs, max_q_len, max_k_len]
-    const int* q_lens,  // input: lens: [bs]
-    const int* k_lens,  // context: lens: [bs]
+    T *mask,            // mask: [bs, max_q_len, max_k_len]
+    const int *q_lens,  // input: lens: [bs]
+    const int *k_lens,  // context: lens: [bs]
     int max_q_len, int max_k_len // 当前轮次最大的 q or k
 ) {
     int tid = threadIdx.x;
@@ -64,7 +64,7 @@ __global__ void BuildCausalMasksConsideringContextPastKV(
 
 // mask: [bs, max_q_len, max_k_len]
 template<typename T>
-void launchBuildCausalMasks(TensorWrapper<T>* mask,     
+void launchBuildCausalMasks(TensorWrapper<T> *mask,     
         TensorWrapper<int>* q_lens,TensorWrapper<int>* k_lens) {
     int batch_size  = mask->shape[0];
     int max_q_len   = mask->shape[1];

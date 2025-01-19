@@ -32,19 +32,19 @@ int main(){
     cublasWrapper* cublas_wrapper = new cublasWrapper(cublas_handle, cublaslt_handle);
     BaseAllocator* allocator = new CudaAllocator;
     // prepare input、weight and output data
-    float* h_attention_input = (float*) malloc(sizeof(float) * q_hidden_units * attn_dyn_params.batch_size);
-    float* d_attention_input;
+    float *h_attention_input = (float*) malloc(sizeof(float) * q_hidden_units * attn_dyn_params.batch_size);
+    float *d_attention_input;
     cudaMalloc((void**)&d_attention_input, sizeof(float) * q_hidden_units * attn_dyn_params.batch_size);
     for(int i = 0; i < q_hidden_units * attn_dyn_params.batch_size; i++) { 
        h_attention_input[i] = 1.0f;
     }
 
     //max_seq_len is the max kv cache len
-    float* h_all_k_cache = (float*) malloc(sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size);
-    float* d_all_k_cache;
+    float *h_all_k_cache = (float*) malloc(sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size);
+    float *d_all_k_cache;
     cudaMalloc((void**)&d_all_k_cache, sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size);// wehn add bias to k, we ensure head_id < kv_head_num
-    float* h_all_v_cache = (float*) malloc(sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size);
-    float* d_all_v_cache;
+    float *h_all_v_cache = (float*) malloc(sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size);
+    float *d_all_v_cache;
     cudaMalloc((void**)&d_all_v_cache, sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size);// wehn add bias to k, we ensure head_id < kv_head_num
     for(int i = 0; i < num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size; i++) {
        h_all_k_cache[i] = 1.0f;
@@ -58,28 +58,28 @@ int main(){
         h_finished[i] = static_cast<bool>(0);
     }
 
-    float* h_qkv_weights = (float*) malloc(sizeof(float) * q_hidden_units * hidden_units);
-    float* d_qkv_weights;
+    float *h_qkv_weights = (float*) malloc(sizeof(float) * q_hidden_units * hidden_units);
+    float *d_qkv_weights;
     cudaMalloc((void**)&d_qkv_weights, sizeof(float) * q_hidden_units * hidden_units);
     for(int i = 0; i < hidden_units * q_hidden_units; i++) { 
        h_qkv_weights[i] = 1.0f;
     }    
 
-    float* h_output_weights = (float*) malloc(sizeof(float) * q_hidden_units * q_hidden_units);
-    float* d_output_weights;
+    float *h_output_weights = (float*) malloc(sizeof(float) * q_hidden_units * q_hidden_units);
+    float *d_output_weights;
     cudaMalloc((void**)&d_output_weights, sizeof(float) * q_hidden_units * q_hidden_units);
     for(int i = 0; i < q_hidden_units * q_hidden_units; i++) { 
        h_output_weights[i] = 1.0f;
     }
 
-    float* h_qkv_bias = (float*) malloc(sizeof(float) * hidden_units);
-    float* d_qkv_bias;
+    float *h_qkv_bias = (float*) malloc(sizeof(float) * hidden_units);
+    float *d_qkv_bias;
     cudaMalloc((void**)&d_qkv_bias, sizeof(float) * hidden_units);// wehn add bias to k, we ensure head_id < kv_head_num
     for(int i = 0; i < hidden_units; i++){
         h_qkv_bias[i] = 2.0f;
     }
 
-    float* d_attention_output;
+    float *d_attention_output;
     cudaMalloc((void**)&d_attention_output, sizeof(float) * q_hidden_units * attn_dyn_params.batch_size);
 
     CHECK(cudaMemcpy(d_attention_input, h_attention_input, sizeof(float) * q_hidden_units * attn_dyn_params.batch_size, cudaMemcpyHostToDevice));

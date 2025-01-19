@@ -10,14 +10,14 @@
 #include "src/utils/macro.h"
 // (RussWong)note: not sure CPU implementation is absolutely right and the GPU kernel is right compared with HF.
 // when you are implementing LLMs inference on CPU, you can reuse the CPU kernel and test its correctness
-void CPUfunc(float* q,
-                float* k,
-                float* v,
-                float* QKV,
-                const float* qkv_bias,
-                const int*   padding_offset,
-                const int*   history_length,
-                const int*   input_length,
+void CPUfunc(float *q,
+                float *k,
+                float *v,
+                float *QKV,
+                const float *qkv_bias,
+                const int *  padding_offset,
+                const int *  history_length,
+                const int *  input_length,
                 const int    batch_size,
                 const int    seq_len,
                 const int    token_num,
@@ -76,7 +76,7 @@ void CPUfunc(float* q,
     }
 }
 
-void CheckResult(float* q, float* k, float* hq, float* hk, 
+void CheckResult(float *q, float *k, float *hq, float *hk, 
                 const int q_size, const int k_size) {
     for(int i = 0; i < q_size; i++) {
         printf("the %dth q: q = %f, hq = %f\n", i, q[i], hq[i]);
@@ -91,9 +91,9 @@ void CheckResult(float* q, float* k, float* hq, float* hk,
 int main() {
     const int batch_size = 1;
     const int seq_len = 32;
-    int* padding_offset = (int*)malloc(sizeof(int) * batch_size * seq_len);
-    int* history_length = (int*)malloc(sizeof(int) * batch_size);
-    int* input_length = (int*)malloc(sizeof(int) * batch_size);
+    int *padding_offset = (int*)malloc(sizeof(int) * batch_size * seq_len);
+    int *history_length = (int*)malloc(sizeof(int) * batch_size);
+    int *input_length = (int*)malloc(sizeof(int) * batch_size);
     const int token_num = batch_size * seq_len;
     const int head_num = 32;
     const int kv_head_num = 32;
@@ -102,11 +102,11 @@ int main() {
     const int rotary_embedding_base = 10000;
     const int max_position_embeddings = 2048;
     
-    float* q = (float*)malloc(sizeof(float) * batch_size * seq_len * head_num * head_size); //output
-    float* k = (float*)malloc(sizeof(float) * batch_size * seq_len * kv_head_num * head_size); //output
-    float* v = (float*)malloc(sizeof(float) * batch_size * seq_len * kv_head_num * head_size); //output
-    float* QKV = (float*)malloc(sizeof(float) * token_num * (head_num + 2 * kv_head_num) * head_size);
-    float* qkv_bias = (float*)malloc(sizeof(float) * (head_num + 2 * kv_head_num) * head_size);
+    float *q = (float*)malloc(sizeof(float) * batch_size * seq_len * head_num * head_size); //output
+    float *k = (float*)malloc(sizeof(float) * batch_size * seq_len * kv_head_num * head_size); //output
+    float *v = (float*)malloc(sizeof(float) * batch_size * seq_len * kv_head_num * head_size); //output
+    float *QKV = (float*)malloc(sizeof(float) * token_num * (head_num + 2 * kv_head_num) * head_size);
+    float *qkv_bias = (float*)malloc(sizeof(float) * (head_num + 2 * kv_head_num) * head_size);
     for(int i = 0; i < token_num * (head_num + 2 * kv_head_num) * head_size; i++){
         QKV[i] = 32.0f;
     }
@@ -121,14 +121,14 @@ int main() {
         padding_offset[i] = 0;
     }
 
-    int* dpadding_offset;
-    int* dhistory_length; 
-    int* dinput_length;
-    float* dq;
-    float* dk;
-    float* dv;
-    float* dQKV;
-    float* dqkv_bias;
+    int *dpadding_offset;
+    int *dhistory_length; 
+    int *dinput_length;
+    float *dq;
+    float *dk;
+    float *dv;
+    float *dQKV;
+    float *dqkv_bias;
     cudaMalloc((void**)&dpadding_offset, sizeof(int) * batch_size * seq_len);
     cudaMalloc((void**)&dhistory_length, sizeof(int) * batch_size);
     cudaMalloc((void**)&dinput_length, sizeof(int) * batch_size);
@@ -182,8 +182,8 @@ int main() {
     
     std::cout << "after memcpyd2h, dq[0] = " << q[0] << std::endl;
     std::cout << "before CPU function" << std::endl;
-    float* hq = (float*)malloc(sizeof(float) * batch_size * seq_len * head_num * head_size); //output
-    float* hk = (float*)malloc(sizeof(float) * batch_size * seq_len * kv_head_num * head_size); //output
+    float *hq = (float*)malloc(sizeof(float) * batch_size * seq_len * head_num * head_size); //output
+    float *hk = (float*)malloc(sizeof(float) * batch_size * seq_len * kv_head_num * head_size); //output
     CPUfunc(hq,
             hk, //output
             v,

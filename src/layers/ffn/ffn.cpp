@@ -1,11 +1,11 @@
-// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_units](num_tokens: bs * q_len, q_len: 单个句子中的token集合, bs: 句子)
 //                              |
-//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              -> cal_paddingoffset: [bs, max_q_len, hidden_units]
 //                              |
-//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              -> build_casual_mask: mask: [bs, max_q_len, max_k_len]
 //                              |
-//                              -> RMSNorm: [num_tokens, hidden_size] -> fusedQkvGemm: * [hidden_size, hidden_size] -> [num_tokens, hidden_size]
-//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_size] -> [bs, q_head_num, max_q_len, head_size]  ->
+//                              -> RMSNorm: [num_tokens, hidden_units] -> fusedQkvGemm: * [hidden_units, hidden_units] -> [num_tokens, hidden_units]
+//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_units] -> [bs, q_head_num, max_q_len, head_size]  ->
 //                                            |                                       |
 //                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
 //                                            |                                       |
@@ -15,13 +15,13 @@
 //                                            |
 //                                            -> Broadcast: kv: [bs, q_head_num, max_k_len, head_size]
 //															-> Attention: [bs, q_head_num, max_q_len, max_k_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
-//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len, hidden_size](bs*seq_len = num_tokens)
-//                                  -> [num_tokens, hidden_size]
-//                              -> FusedAddbiasResidual: [num_tokens, hidden_size]
+//                              -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len, hidden_units](bs*seq_len = num_tokens)
+//                                  -> [num_tokens, hidden_units]
+//                              -> FusedAddbiasResidual: [num_tokens, hidden_units]
 
-// input: [bs, seq_len, hidden_size](来自FusedAddbiasResidual, context_attention的输出)
+// input: [bs, seq_len, hidden_units](来自FusedAddbiasResidual, context_attention的输出)
 // Gate_linear和up_linear公用一块buffer(SwiGLU_input_buf)
-// output: [bs, seq_len, hidden_size](输入FusedAddbiasResidual)
+// output: [bs, seq_len, hidden_units](输入FusedAddbiasResidual)
 #include <iostream>
 #include "src/layers/ffn/ffn.h"
 #include "src/utils/debug_utils.h"
@@ -92,8 +92,8 @@ void LLaMaFFNLayer<T>::forward(TensorMap& inputs, TensorMap& outputs,
 	} else {
 		allocForForward(params.batch_size);
 	}
-	Tensor *ffn_input = inputs["ffn_input"];
-	Tensor *ffn_output = outputs["ffn_output"];
+	Tensor* ffn_input = inputs["ffn_input"];
+	Tensor* ffn_output = outputs["ffn_output"];
 	bool is_ctx = params.is_ctx;
 
 	// 1.fusedGateUp proj

@@ -6,5 +6,5 @@
 #include "src/utils/vectorize_utils.h"
 
 template<typename T>
-void launchScaleMaskAndSoftmax(TensorWrapper<T>* qk,
-    TensorWrapper<T>* mask, TensorWrapper<T>* attn_score, float scale);
+void launchScaleMaskAndSoftmax(TensorWrapper<T> *qk,
+    TensorWrapper<T> *mask, TensorWrapper<T> *attn_score, float scale);

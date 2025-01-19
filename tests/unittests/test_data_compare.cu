@@ -54,7 +54,7 @@ std::vector<float> loadWeightFromBinHelper(std::vector<size_t> shape, std::strin
     // If we succeed, return an array with values.
     return host_array;
 }
-void internalFunc(float* ptr, std::vector<size_t> shape, std::string filename) {
+void internalFunc(float *ptr, std::vector<size_t> shape, std::string filename) {
     std::vector<float> host_array = loadWeightFromBinHelper(shape, filename);
     if (host_array.empty()) {
         std::cout << "[warning] data from file is empty!!" << "\n";
@@ -64,20 +64,20 @@ void internalFunc(float* ptr, std::vector<size_t> shape, std::string filename) {
     memcpy(ptr, host_array.data(), host_array.size());
     return;
 }
-void loadWeights(float* ptr1, std::string weight_path, int shape0, int shape1) // weighttype参数比较多余
+void loadWeights(float *ptr1, std::string weight_path, int shape0, int shape1) // weighttype参数比较多余
 {
     // load attn output
     internalFunc(ptr1, {(size_t)shape0, (size_t)shape1}, weight_path);
 
 }
-void loadWeights_trans(float* ptr1, std::string weight_path, int shape0, int shape1) // weighttype参数比较多余
+void loadWeights_trans(float *ptr1, std::string weight_path, int shape0, int shape1) // weighttype参数比较多余
 {
     // load attn output
     internalFunc(ptr1, {(size_t)shape0, (size_t)shape1}, weight_path);
 
 }
 
-bool CheckResult(float* CPUoutput, float* GPUoutput, int in_size) {
+bool CheckResult(float *CPUoutput, float *GPUoutput, int in_size) {
     for(int i = 0; i < in_size; i++) {
 	if(fabs(CPUoutput[i] - GPUoutput[i]) > 1e-6){
 	    printf("the %dth res is wrong, onellm = %f, trans = %f\n", i, CPUoutput[i], GPUoutput[i]);
@@ -95,8 +95,8 @@ int main(int argc, char *argv[]) {
     
     int in_size = shape0 * shape1;
 
-    float* d_in = (float*) malloc(sizeof(float) * in_size);
-    float* d_in_trans = (float*) malloc(sizeof(float) * in_size);
+    float *d_in = (float*) malloc(sizeof(float) * in_size);
+    float *d_in_trans = (float*) malloc(sizeof(float) * in_size);
 
     loadWeights(d_in, "/home/data/onellm/0_self_decoder_qk_v_after_bmm.bin", shape0, shape1); // TO MODIFY
     loadWeights_trans(d_in_trans, "/home/data/trans/self_decoder_qk_v_buf_after_bmm_trans.bin", shape0, shape1); // TO MODIFY

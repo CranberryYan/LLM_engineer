@@ -8,7 +8,7 @@ public:
     virtual ~BaseAllocator() {};
 public:
     template<typename T>
-    T* Malloc(T *ptr, size_t size, bool is_host) {
+    T *Malloc(T *ptr, size_t size, bool is_host) {
         return (T*)UnifyMalloc((void*)ptr, size, is_host);
     }
 

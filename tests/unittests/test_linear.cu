@@ -10,7 +10,7 @@
 #include "src/kernels/linear.h"
 #include "src/weights/base_weights.h"
 
-void CPUlinear(float* input, float* weight, float* output,
+void CPUlinear(float *input, float *weight, float *output,
                 int m, int k, int n) {
     for(int i = 0; i < m; i++) {
         for(int j = 0; j < n; j++) {
@@ -21,7 +21,7 @@ void CPUlinear(float* input, float* weight, float* output,
     }
 }
 
-bool CheckResult(float* CPUoutput, float* GPUoutput, int output_size) {
+bool CheckResult(float *CPUoutput, float *GPUoutput, int output_size) {
     for(int i = 0; i < output_size; i++) {
     if (i < 5) {
         printf("0th res, CPUoutput = %f, GPUoutput = %f\n", CPUoutput[i], GPUoutput[i]);
@@ -46,23 +46,23 @@ int main(int argc, char *argv[]) {
     hidden_units_2 = hidden_units * hidden_units;
     output_size = seqlen * hidden_units;
     
-    float* h_w;
-    float* d_w;
+    float *h_w;
+    float *d_w;
     h_w = (float*)malloc(sizeof(float) * hidden_units_2);
     cudaMalloc((void**)&d_w, sizeof(float) * hidden_units_2);
     for(int i = 0; i < hidden_units_2; i++) {
        h_w[i] = (float)(i % 3); // 1 2 1 2
     }
 
-    float* h_in = (float*) malloc(sizeof(float) * hidden_units * seqlen);
-    float* d_in;
+    float *h_in = (float*) malloc(sizeof(float) * hidden_units * seqlen);
+    float *d_in;
     cudaMalloc((void**)&d_in, sizeof(float) * seqlen *  hidden_units);
     for(int i = 0; i < hidden_units * seqlen; i++) {
        h_in[i] = (float)(i % 3);
     }
 
-    float* h_out = (float*) malloc(sizeof(float) * output_size);
-    float* d_out;
+    float *h_out = (float*) malloc(sizeof(float) * output_size);
+    float *d_out;
     cudaMalloc((void**)&d_out, sizeof(float) * output_size);
     CHECK(cudaMemcpy(d_in, h_in, sizeof(float) * hidden_units * seqlen, cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_w, h_w, sizeof(float) * hidden_units_2, cudaMemcpyHostToDevice));
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
     std::cout << "cuda memcpy device to host" << std::endl;
     // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
     CHECK(cudaMemcpy(h_out, d_out, sizeof(float) * output_size, cudaMemcpyDeviceToHost));
-    float* CPUout = (float*) malloc(sizeof(float) * output_size);
+    float *CPUout = (float*) malloc(sizeof(float) * output_size);
     CPUlinear(h_in, h_w, CPUout, seqlen, hidden_units, hidden_units);
 
     bool is_right = CheckResult(CPUout, h_out, output_size);

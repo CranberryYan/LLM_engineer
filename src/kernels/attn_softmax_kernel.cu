@@ -6,14 +6,14 @@
 // Qk gemm -> Attention mask -> Scale -> Softmax
 // 三个访存密集算子的融合
 
-// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_units](num_tokens: bs * q_len, q_len: 单个句子中的token集合, bs: 句子)
 //                              |
-//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              -> cal_paddingoffset: [bs, max_q_len, hidden_units]
 //                              |
-//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              -> build_casual_mask: mask: [bs, max_q_len, max_k_len]
 //                              |
-//                              -> RMSNorm: [num_tokens, hidden_size] -> fusedQkvGemm: * [hidden_size, hidden_size] -> [num_tokens, hidden_size]
-//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_size] -> [bs, q_head_num, max_q_len, head_size]  ->
+//                              -> RMSNorm: [num_tokens, hidden_units] -> fusedQkvGemm: * [hidden_units, hidden_units] -> [num_tokens, hidden_units]
+//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_units] -> [bs, q_head_num, max_q_len, head_size]  ->
 //                                            |                                       |
 //                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
 //                                            |                                       |
@@ -141,8 +141,8 @@ __global__ void ScaleMaskAndSoftmax_float(T *attn_score, T *qk, T *mask,
 
 
 template<typename T>
-void launchScaleMaskAndSoftmax(TensorWrapper<T>* qk, TensorWrapper<T>* mask, 
-	TensorWrapper<T>* attn_score, float scale) {
+void launchScaleMaskAndSoftmax(TensorWrapper<T> *qk, TensorWrapper<T> *mask, 
+	TensorWrapper<T> *attn_score, float scale) {
 
 	// attention_score: [batch_size, head_num, max_q_len, max_k_len] (max_q_len == max_k_len)
 	// qk:              [batch_size, head_num, max_q_len, max_k_len]

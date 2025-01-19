@@ -29,31 +29,31 @@ int main(int argc, char** argv)
     LLaMaAttentionDynParams attn_dyn_params;
     attn_dyn_params.num_tokens = 14;  
     std::cout << "start malloc/cudamalloc buffer" << "\n";
-    float* h_ffn_input = (float*) malloc(sizeof(float) * hidden_units * attn_dyn_params.num_tokens);
-    float* d_ffn_input;
+    float *h_ffn_input = (float*) malloc(sizeof(float) * hidden_units * attn_dyn_params.num_tokens);
+    float *d_ffn_input;
     cudaMalloc((void**)&d_ffn_input, sizeof(float) * hidden_units * attn_dyn_params.num_tokens);
     for(int i = 0; i < hidden_units * attn_dyn_params.num_tokens; i++) { 
        h_ffn_input[i] = (float)(i % 2 + 1);
     }    
-    float* h_gate_up = (float*) malloc(sizeof(float) * hidden_units * 2 * inter_size);
-    float* d_gate_up;
+    float *h_gate_up = (float*) malloc(sizeof(float) * hidden_units * 2 * inter_size);
+    float *d_gate_up;
     cudaMalloc((void**)&d_gate_up, sizeof(float) * hidden_units * 2 * inter_size);
     for(int i = 0; i < hidden_units * 2 * inter_size; i++) { 
        h_gate_up[i] = (float)(i % 2 + 1);
     }  
-    //  float* h_up = (float*) malloc(sizeof(float) * hidden_units * inter_size);
-    //  float* d_up;
+    //  float *h_up = (float*) malloc(sizeof(float) * hidden_units * inter_size);
+    //  float *d_up;
     //  cudaMalloc((void**)&d_up, sizeof(float) * hidden_units * inter_size);
     //  for(int i = 0; i < hidden_units * inter_size; i++) { 
     //     h_up[i] = 1.0f;
     //  }  
-    float* h_down = (float*) malloc(sizeof(float) * hidden_units * inter_size);
-    float* d_down;
+    float *h_down = (float*) malloc(sizeof(float) * hidden_units * inter_size);
+    float *d_down;
     cudaMalloc((void**)&d_down, sizeof(float) * hidden_units * inter_size);
     for(int i = 0; i < hidden_units * inter_size; i++) { 
        h_down[i] = (float)(i % 2 + 1);
     }  
-    float* d_ffn_output;
+    float *d_ffn_output;
     cudaMalloc((void**)&d_ffn_output, sizeof(float) * attn_dyn_params.num_tokens * hidden_units);
     std::cout << "end malloc/cudamalloc buffer and start memcpyh2d" << "\n";
     CHECK(cudaMemcpy(d_ffn_input, h_ffn_input, sizeof(float) * hidden_units * attn_dyn_params.num_tokens, cudaMemcpyHostToDevice));

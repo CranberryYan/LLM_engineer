@@ -6,4 +6,4 @@
 #include "src/utils/vectorize_utils.h"
 
 template<typename T>
-void launchAct(TensorWrapper<T>* input, TensorWrapper<T>* out);
+void launchAct(TensorWrapper<T> *input, TensorWrapper<T> *out);

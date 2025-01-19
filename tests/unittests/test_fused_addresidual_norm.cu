@@ -30,8 +30,8 @@ do                                                    \
     }                                                 \
 } while (0)
 
-void CPUfusedresidandRMSNorm(float* h_residual, float* h_decoder_out, float* h_bias, 
-                                    float* h_scale, float eps, int hidden_units, int num_tokens) {
+void CPUfusedresidandRMSNorm(float *h_residual, float *h_decoder_out, float *h_bias, 
+                                    float *h_scale, float eps, int hidden_units, int num_tokens) {
     for(int b = 0; b < num_tokens; b++) {
         float inv_fenmu = 0.0f;
         float mean = 0.0f;
@@ -54,7 +54,7 @@ void CPUfusedresidandRMSNorm(float* h_residual, float* h_decoder_out, float* h_b
     }
 }
 
-bool CheckResult(float* CPUoutput, float* GPUoutput, int output_size) {
+bool CheckResult(float *CPUoutput, float *GPUoutput, int output_size) {
     for(int i = 0; i < output_size; i++) {
         printf("the %dth res: CPUoutput = %f, GPUoutput = %f\n", i, CPUoutput[i], GPUoutput[i]);
     }
@@ -67,31 +67,31 @@ int main() {
     const int total_size = num_tokens * hidden_units;
     float eps = 0.5f;
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
-    float* h_residual;
-    float* d_residual;
+    float *h_residual;
+    float *d_residual;
     h_residual = (float*)malloc(sizeof(float) * total_size);
     cudaMalloc((void**)&d_residual, sizeof(float) * total_size);
     for(int i = 0; i < total_size; i++) { 
         h_residual[i] = 0.0f;
     }
 
-    float* h_decoder_out = (float*) malloc(sizeof(float) * total_size);
-    float* decoder_out = (float*) malloc(sizeof(float) * total_size);
-    float* d_decoder_out;
+    float *h_decoder_out = (float*) malloc(sizeof(float) * total_size);
+    float *decoder_out = (float*) malloc(sizeof(float) * total_size);
+    float *d_decoder_out;
     cudaMalloc((void**)&d_decoder_out, sizeof(float) * total_size);
     for(int i = 0; i < total_size; i++) { 
        h_decoder_out[i] = 1.0f;
     }
     //bias
-    float* h_bias = (float*) malloc(sizeof(float) * hidden_units);
-    float* d_bias;
+    float *h_bias = (float*) malloc(sizeof(float) * hidden_units);
+    float *d_bias;
     cudaMalloc((void**)&d_bias, sizeof(float) * hidden_units);
     for(int i = 0; i < hidden_units; i++) { 
        h_bias[i] = 0.0f;
     }
     //rmsnorm weights
-    float* h_scale = (float*) malloc(sizeof(float) * hidden_units);
-    float* d_scale;
+    float *h_scale = (float*) malloc(sizeof(float) * hidden_units);
+    float *d_scale;
     cudaMalloc((void**)&d_scale, sizeof(float) * hidden_units);
     for(int i = 0; i < hidden_units; i++) { 
        h_scale[i] = 1.0f;
@@ -128,7 +128,7 @@ int main() {
     std::cout << "cuda memcpy device to host" << std::endl;
     // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
     CHECK(cudaMemcpy(decoder_out, d_decoder_out, sizeof(float) * total_size, cudaMemcpyDeviceToHost));
-    float* CPUout = (float*) malloc(sizeof(float) * total_size);
+    float *CPUout = (float*) malloc(sizeof(float) * total_size);
     for(int i = 0; i < total_size; i++){
         CPUout[i] = 1.0f;
     }

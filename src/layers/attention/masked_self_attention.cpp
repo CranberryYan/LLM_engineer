@@ -14,14 +14,14 @@
 //  Qk*v gemm      -----|
 //  Output linear
 
-// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_units](num_tokens: bs * q_len, q_len: 单个句子中的token集合, bs: 句子)
 //                              |
-//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              -> cal_paddingoffset: [bs, max_q_len, hidden_units]
 //                              |
-//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              -> build_casual_mask: mask: [bs, max_q_len, max_k_len]
 //                              |
-//                              -> RMSNorm: [num_tokens, hidden_size] -> fusedQkvGemm: * [hidden_size, hidden_size] -> [num_tokens, hidden_size]
-//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_size] -> [bs, q_head_num, max_q_len, head_size]  ->
+//                              -> RMSNorm: [num_tokens, hidden_units] -> fusedQkvGemm: * [hidden_units, hidden_units] -> [num_tokens, hidden_units]
+//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_units] -> [bs, q_head_num, max_q_len, head_size]  ->
 //                                            |                                       |
 //                                            |                                       -> [bs, kv_head_num, max_q_len, head_size] ->
 //                                            |                                       |
@@ -31,9 +31,9 @@
 //                                            |
 //                                            -> Broadcast: kv: [bs, q_head_num, max_k_len, head_size]
 //										 -> Attention: [bs, q_head_num, max_q_len, max_k_len] -> Qk*v gemm: [bs, q_head_num, max_q_len, head_size]
-//                     -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len, hidden_size](bs*seq_len = num_tokens)
-//                      	-> [num_tokens, hidden_size]
-//                     -> FusedAddbiasResidual: [num_tokens, hidden_size]
+//                     -> RemovePadding: [bs, q_head_num, seq_len, head_size] -> [bs, seq_len, q_head_num, head_size] -> [bs, seq_len, hidden_units](bs*seq_len = num_tokens)
+//                      	-> [num_tokens, hidden_units]
+//                     -> FusedAddbiasResidual: [num_tokens, hidden_units]
 
 #include <math.h>
 #include "src/utils/debug_utils.h"
@@ -97,7 +97,7 @@ void LLaMaSelfAttentionLayer<T>::forward(
 	// int q_hidden_units = head_num * head_size;
 	// [bs, q_hidden_units] *
 	//	[q_hidden_units, hidden_units]
-	Tensor *attention_input = inputs["attention_input"];
+	Tensor* attention_input = inputs["attention_input"];
 	launchLinearGemm(attention_input->as<T>(), weights.qkv,
 		qkv_buf, cublas_wrapper);
 	DeviceSyncAndCheckCudaError();
@@ -106,18 +106,18 @@ void LLaMaSelfAttentionLayer<T>::forward(
 	// qkv_buf: [bs, hidden_units] ->
 	//	[bs, qkv_head_num, head_size]
 	//	bs: 不同句子, self_decoder默认为1
-	Tensor *step = inputs["step"];
+	Tensor* step = inputs["step"];
 	LLaMaAttentionStaticParams attn_static_params = GetAttnStaticParams();
 	launchRoPE(qkv_buf, step->as<int>(), attn_static_params);
 	DeviceSyncAndCheckCudaError();
 
 	// 3. FusedMaskedSelfAttention
 	// [layer_id, bs, kv_head_num, head_size]
-	Tensor *layer_id = inputs["layer_id"];
-	Tensor *finished = inputs["finished"];
-	Tensor *k_cache = outputs["all_k_cache"];
-	Tensor *v_cache = outputs["all_v_cache"];
-	Tensor *attention_output = outputs["attention_output"];
+	Tensor* layer_id = inputs["layer_id"];
+	Tensor* finished = inputs["finished"];
+	Tensor* k_cache = outputs["all_k_cache"];
+	Tensor* v_cache = outputs["all_v_cache"];
+	Tensor* attention_output = outputs["attention_output"];
 	launchDecoderMaskedMHA(qkv_buf, weights.qkv, layer_id->as<int>(),
 		k_cache->as<T>(), v_cache->as<T>(), finished->as<bool>(), 
 		step->as<int>(), mha_output, attn_static_params);

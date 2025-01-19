@@ -28,7 +28,7 @@ do                                                    \
     }                                                 \
 } while (0)
 
-void CPUresidual(float* h_residual, float* h_decoder_out,  int hidden_units, int num_tokens) {
+void CPUresidual(float *h_residual, float *h_decoder_out,  int hidden_units, int num_tokens) {
     for(int b = 0; b < num_tokens; b++) {
         for (int i = 0; i < hidden_units; i++) {
             h_decoder_out[b * hidden_units + i] += h_residual[b * hidden_units + i];
@@ -36,7 +36,7 @@ void CPUresidual(float* h_residual, float* h_decoder_out,  int hidden_units, int
     }
 }
 
-bool CheckResult(float* CPUoutput, float* GPUoutput, int output_size) {
+bool CheckResult(float *CPUoutput, float *GPUoutput, int output_size) {
     for(int i = 0; i < output_size; i++) {
         if(fabs(CPUoutput[i] - GPUoutput[i]) > 1e-6){
             printf("the %dth res is wrong, CPUoutput = %f, GPUoutput = %f\n", i, CPUoutput[i], GPUoutput[i]);
@@ -52,17 +52,17 @@ int main() {
     const int hidden_units = 4096;
     const int total_size = num_tokens * hidden_units;
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
-    float* h_residual;
-    float* d_residual;
+    float *h_residual;
+    float *d_residual;
     h_residual = (float*)malloc(sizeof(float) * total_size);
     cudaMalloc((void**)&d_residual, sizeof(float) * total_size);
     for(int i = 0; i < total_size; i++) { 
        h_residual[i] = (float)(i % 2 + 1);
     }
 
-    float* h_decoder_out = (float*) malloc(sizeof(float) * total_size);
-    float* decoder_out = (float*) malloc(sizeof(float) * total_size);
-    float* d_decoder_out;
+    float *h_decoder_out = (float*) malloc(sizeof(float) * total_size);
+    float *decoder_out = (float*) malloc(sizeof(float) * total_size);
+    float *d_decoder_out;
     cudaMalloc((void**)&d_decoder_out, sizeof(float) * total_size);
     for(int i = 0; i < total_size; i++) { 
        h_decoder_out[i] = (float)(i % 2 + 1);
@@ -88,7 +88,7 @@ int main() {
     std::cout << "cuda memcpy device to host" << std::endl;
     // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
     CHECK(cudaMemcpy(decoder_out, d_decoder_out, sizeof(float) * total_size, cudaMemcpyDeviceToHost));
-    float* CPUout = (float*) malloc(sizeof(float) * total_size);
+    float *CPUout = (float*) malloc(sizeof(float) * total_size);
     for(int i = 0; i < total_size; i++){
         CPUout[i] = (float)(i % 2 + 1);
     }

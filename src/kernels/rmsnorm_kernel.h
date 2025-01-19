@@ -7,5 +7,5 @@
 #include "src/weights/llama/norm_weights.h"
 
 template<typename T>
-void launchRMSNorm(TensorWrapper<T>* decoder_out,
+void launchRMSNorm(TensorWrapper<T> *decoder_out,
 	LayerNormWeight<T> &attn_norm_weight, float eps);

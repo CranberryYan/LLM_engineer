@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include "src/kernels/add_residual.h"
 
-
 template<typename T>
 __global__ void AddResidual(T *residual, T *decoder_out,
     int num_tokens, int hidden_units) {
@@ -45,7 +44,6 @@ void launchAddResidual(             // 在context_decoder阶段: num_tokens   �
     bool is_print) {
     int num_tokens = decoder_out->shape[0];
     int hidden_units = decoder_out->shape[1];
-    int vec_size = Vec<T>::size;
     dim3 grid(num_tokens);
     dim3 block(256);
     AddResidual<<<grid, block>>>(residual->data, decoder_out->data, 

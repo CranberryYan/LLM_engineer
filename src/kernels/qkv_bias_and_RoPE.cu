@@ -1,14 +1,14 @@
 // linear: 用于gemm, 2d x 2d: fused
 //          batch_gemm, 4d x 4d: [batch_size, head_num, seq_len, head_size]: Qk_gemm, Qk*v_gemm
 //          LMHead(linear): hidden_units -> vocab_size(接下来要sampling)
-// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_units](num_tokens: bs * q_len, q_len: 单个句子中的token集合, bs: 句子)
 //                              |
-//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              -> cal_paddingoffset: [bs, max_q_len, hidden_units]
 //                              |
-//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              -> build_casual_mask: mask: [bs, max_q_len, max_k_len]
 //                              |
-//                              -> RMSNorm: [num_tokens, hidden_size] -> fusedQkvGemm: * [hidden_size, hidden_size] -> [num_tokens, hidden_size]
-//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_size] -> [bs, q_head_num, max_q_len, head_size]  ->
+//                              -> RMSNorm: [num_tokens, hidden_units] -> fusedQkvGemm: * [hidden_units, hidden_units] -> [num_tokens, hidden_units]
+//                              -> AddbiasAndPaddingAndRope: [max_num_tokens, hidden_units] -> [bs, q_head_num, max_q_len, head_size]  ->
 //                                                                                          |
 //                                                                                          -> [bs, kv_head_num, max_q_len, head_size] ->
 //                                                                                          |
@@ -19,7 +19,7 @@
 // 2. padding, QKV splits to q k v and their shape is [bs, q head num(kv head num), max q len, head_size]
 // 3. rope and do attention
 // 4. write back to global memory
-// 在多头注意力中, 模型的总维度(即 hidden_size)被分成多个独立的子空间, 每个子空间对应一个注意力头。
+// 在多头注意力中, 模型的总维度(即 hidden_units)被分成多个独立的子空间, 每个子空间对应一个注意力头。
 //  每个注意力头只会处理输入的一个子空间(即一个较小的维度), 因此每个头的维度为 head_size
 // input: [num_tokens, hidden_units]
 //      int token_id = blockIdx.x;
@@ -181,7 +181,7 @@ __global__ void rope_kernel_for_self_decoder(half *q, half*k,
 
     }
 
-// input: [num_tokens, hidden_size]
+// input: [num_tokens, hidden_units]
 // output: q: [bs, head_num, max_q_len, head size]
 //       k/v: [bs, kv head_num, max_q_len, head size]
 // this launch for context attention
@@ -227,9 +227,9 @@ void launchRoPE(TensorWrapper<T> *qkv_buf, TensorWrapper<int> *step,
     T *q = qkv_data;
     T *k = qkv_data + head_num * head_size;
 
-    int   rotary_embedding_dim = static_params.rotary_embedding_dim;
+    int rotary_embedding_dim = static_params.rotary_embedding_dim;
     float rotary_embedding_base = static_params.rotary_embedding_base;
-    int   max_position_embeddings = static_params.max_position_embeddings;
+    int max_position_embeddings = static_params.max_position_embeddings;
     dim3 grid(head_num, batch_size);
     dim3 block(head_size);
 

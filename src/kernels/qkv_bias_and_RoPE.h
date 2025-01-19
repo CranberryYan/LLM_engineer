@@ -9,12 +9,12 @@
 
 template<typename T>
 void launchAddFusedQKVBiasTransposeAndRoPE(
-	TensorWrapper<T>* q_buf, TensorWrapper<T>* k_buf, TensorWrapper<T>* v_buf,
-	TensorWrapper<T>* QKV, BaseWeight<T>& qkv, TensorWrapper<int>* padding_offset,
+	TensorWrapper<T> *q_buf, TensorWrapper<T> *k_buf, TensorWrapper<T> *v_buf,
+	TensorWrapper<T> *QKV, BaseWeight<T>& qkv, TensorWrapper<int>* padding_offset,
 	TensorWrapper<int>* history_length, TensorWrapper<int>* input_length,
 	LLaMaAttentionStaticParams& params);
 
 template<typename T>
-void launchRoPE(TensorWrapper<T>* qkv_buf,
+void launchRoPE(TensorWrapper<T> *qkv_buf,
 	TensorWrapper<int>* step,
     LLaMaAttentionStaticParams& static_params);

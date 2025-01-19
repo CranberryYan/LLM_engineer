@@ -14,16 +14,16 @@ int main() {
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
     const int in_size = batch_size * head_num * max_seq_len * head_size;
     const int out_size = num_tokens * head_num * head_size;
-    float* h_in;
-    float* d_in;
+    float *h_in;
+    float *d_in;
     h_in = (float*)malloc(sizeof(float) * in_size);
     cudaMalloc((void**)&d_in, sizeof(float) * in_size);
-    float* h_out;
-    float* d_out;
+    float *h_out;
+    float *d_out;
     h_out = (float*)malloc(sizeof(float) * out_size);
     cudaMalloc((void**)&d_out, sizeof(float) * out_size);
-    int* h_padding_offset;
-    int* d_padding_offset;
+    int *h_padding_offset;
+    int *d_padding_offset;
     h_padding_offset = (int*)malloc(sizeof(int) * num_tokens);
     cudaMalloc((void**)&d_padding_offset, sizeof(int) * num_tokens);
 

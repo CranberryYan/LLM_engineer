@@ -8,5 +8,5 @@
 
 
 template<typename T>
-void launchBuildCausalMasks(TensorWrapper<T>* mask, 
+void launchBuildCausalMasks(TensorWrapper<T> *mask, 
         TensorWrapper<int>* q_lens, TensorWrapper<int>* k_lens);

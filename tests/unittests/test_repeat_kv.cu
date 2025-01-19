@@ -21,24 +21,24 @@ int main() {
     const int num_layers = 2;
     const int k_size = num_layers * batch_size * kv_head_num * max_seq_len * head_size;
     const int out_k_size = batch_size * head_num * max_k_len * head_size;
-    float* h_k;
-    float* d_k;
+    float *h_k;
+    float *d_k;
     h_k = (float*)malloc(sizeof(float) * k_size);
     cudaMalloc((void**)&d_k, sizeof(float) * k_size);
-    float* h_v;
-    float* d_v;
+    float *h_v;
+    float *d_v;
     h_v = (float*)malloc(sizeof(float) * k_size);
     cudaMalloc((void**)&d_v, sizeof(float) * k_size);
-    int* h_ctx_len;
-    int* d_ctx_len;
+    int *h_ctx_len;
+    int *d_ctx_len;
     h_ctx_len = (int*)malloc(sizeof(int) * batch_size);
     cudaMalloc((void**)&d_ctx_len, sizeof(int) * batch_size);
-    float* h_trans_k;
-    float* d_trans_k;
+    float *h_trans_k;
+    float *d_trans_k;
     h_trans_k = (float*)malloc(sizeof(float) * out_k_size);
     cudaMalloc((void**)&d_trans_k, sizeof(float) * out_k_size);
-    float* h_trans_v;
-    float* d_trans_v;
+    float *h_trans_v;
+    float *d_trans_v;
     h_trans_v = (float*)malloc(sizeof(float) * out_k_size);
     cudaMalloc((void**)&d_trans_v, sizeof(float) * out_k_size);   
 
@@ -46,7 +46,7 @@ int main() {
        h_v[i] = i;
        h_k[i] = i;
     }
-    int* h_layer_id = (int*)malloc(sizeof(int)*batch_size);
+    int *h_layer_id = (int*)malloc(sizeof(int)*batch_size);
 
     for(int i = 0; i < batch_size; i++) {
        h_ctx_len[i] = 2;

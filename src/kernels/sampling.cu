@@ -48,7 +48,7 @@ __global__ void SamplingKernel(int *topk_id, T *topk_val,
 // input: [bs, K]
 template<typename T>
 void launchSampling(TensorWrapper<int>* topk_id,    // [bs, K]
-    TensorWrapper<T>* topk_val,                     // [bs, K]
+    TensorWrapper<T> *topk_val,                     // [bs, K]
     TensorWrapper<int>* seqlen,                     // [bs] bs个句子, bs个句子长度
     TensorWrapper<bool>* is_finished,               // [bs]
     TensorWrapper<int>* output_id,                  // [bs]

@@ -129,10 +129,10 @@ void launchTopKforBeamSearch(TensorWrapper<T> *probs,
     // int topK_ids_buf_size = batch_size * BlockPerBeam * K;
     // int final_topK_val_buf_size = batch_size * K;
     
-    T* topK_vals = topk_vals->data;
-    int* topK_ids = topk_ids->data;
-    T* final_topK_vals = final_topk_vals->data;
-    int* final_topK_ids = final_topk_ids->data;    
+    T *topK_vals = topk_vals->data;
+    int *topK_ids = topk_ids->data;
+    T *final_topK_vals = final_topk_vals->data;
+    int *final_topK_ids = final_topk_ids->data;    
 
     int maxBlockNums = 1024;
     int BlockNums1 = std::min(batch_size * beamwidth * BlockPerBeam, maxBlockNums);

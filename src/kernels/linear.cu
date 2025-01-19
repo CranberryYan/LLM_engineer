@@ -1,13 +1,13 @@
 // linear: 用于gemm, 2d x 2d: fused
 //          batch_gemm, 4d x 4d: [batch_size, head_num, seq_len, head_size]: Qk_gemm, Qk*v_gemm
 //          LMHead(linear): hidden_units -> vocab_size(接下来要sampling)
-// input: [num_tokens] -> input_embedding: [num_tokens, hidden_size]
+// input: [num_tokens] -> input_embedding: [num_tokens, hidden_units](num_tokens: bs * q_len, q_len: 单个句子中的token集合, bs: 句子)
 //                              |
-//                              -> cal_paddingoffset: [bs, max_num_tokens, hidden_size]
+//                              -> cal_paddingoffset: [bs, max_q_len, hidden_units]
 //                              |
-//                              -> build_casual_mask: mask: [bs, max_num_tokens, max_num_tokens]
+//                              -> build_casual_mask: mask: [bs, max_q_len, max_k_len]
 //                              |
-//                              -> RMSNorm: [num_tokens, hidden_size] -> fusedQkvGemm: [num_tokens, hidden_size] * [hidden_size, hidden_size] -> [num_tokens, hidden_size]
+//                              -> RMSNorm: [num_tokens, hidden_units] -> fusedQkvGemm: [num_tokens, hidden_units] * [hidden_units, hidden_units] -> [num_tokens, hidden_units]
 #include <iostream>
 #include "src/kernels/linear_old.h"
 
@@ -33,8 +33,8 @@
 // 2 * inter_size: gate_linear 和 up_linear 的 weight进行水平拼接
 // down: [bs/token_nums, inter_size] * [hidden_units, inter_size]
 template <typename T>
-void launchLinearGemm(TensorWrapper<T>* input, BaseWeight<T> &weight,
-    TensorWrapper<T>* output, cublasWrapper* cublas_wrapper,
+void launchLinearGemm(TensorWrapper<T> *input, BaseWeight<T> &weight,
+    TensorWrapper<T> *output, cublasWrapper* cublas_wrapper,
     bool trans_a, bool trans_b) {
     // row major: y   = x   * w
     // col major: y^T = w^T * x^T
@@ -84,7 +84,7 @@ void launchLinearGemm(TensorWrapper<T>* input, BaseWeight<T> &weight,
 // V.shape: [bs, head_num, length_k, head_size]
 // Score * V = output.shape: [bs, head_num, length_k, head_size]
 template <typename T>
-void launchLinearStridedBatchGemm(TensorWrapper<T>* input1, TensorWrapper<T>* input2, TensorWrapper<T>* output, 
+void launchLinearStridedBatchGemm(TensorWrapper<T> *input1, TensorWrapper<T> *input2, TensorWrapper<T> *output, 
         cublasWrapper* cublas_wrapper, bool trans_a, bool trans_b) {
     int An = input2->shape[3]; // head_size // head_size
     int Ak = input2->shape[2]; // length_k  // length_k

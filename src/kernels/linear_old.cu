@@ -12,8 +12,8 @@
 // A * B^T = C   transb = true
 // A: [m, k]   B: [k, n]   C: [m, n]
 template <typename T>
-void launchLinearGemm(TensorWrapper<T>* input, BaseWeight<T> &weight,
-        TensorWrapper<T>* output, cublasWrapper* cublas_wrapper,
+void launchLinearGemm(TensorWrapper<T> *input, BaseWeight<T> &weight,
+        TensorWrapper<T> *output, cublasWrapper* cublas_wrapper,
         bool trans_a, bool trans_b)
 {
     int input_lda  = input->shape[0];
@@ -48,15 +48,15 @@ void launchLinearGemm(TensorWrapper<T>* input, BaseWeight<T> &weight,
 }
 
 // 1. Q * K
-// Q.shape: [bs, head_num, seq_len, hidden_size]
-// K.shape: [bs, head_num, seq_len, hidden_size]
+// Q.shape: [bs, head_num, seq_len, hidden_units]
+// K.shape: [bs, head_num, seq_len, hidden_units]
 // Q * K^T = Score
 // 2. Score * V
 // Score.shape: [bs, head_num, seq_len, seq_len]
-// V.shape: [bs, head_num, seq_len, hidden_size]
-// Score * V = output.shape: [bs, head_num, seq_len, hidden_size]
+// V.shape: [bs, head_num, seq_len, hidden_units]
+// Score * V = output.shape: [bs, head_num, seq_len, hidden_units]
 template <typename T>
-void launchLinearStridedBatchGemm(TensorWrapper<T>* input1, TensorWrapper<T>* input2, TensorWrapper<T>* output, 
+void launchLinearStridedBatchGemm(TensorWrapper<T> *input1, TensorWrapper<T> *input2, TensorWrapper<T> *output, 
         cublasWrapper* cublas_wrapper, bool trans_a, bool trans_b)
 {
     // input: [bs, head_nums, seqlen, head_size]

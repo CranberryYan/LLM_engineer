@@ -114,7 +114,7 @@ __device__ T blockReduceMax(T val){
 // flaot *mha_output;
 // }
 template<typename T>
-__global__ void masked_MHA_kernel(T* q, T *k, T *v,
+__global__ void masked_MHA_kernel(T *q, T *k, T *v,
     T *qkv_bias, T *k_cache, T *v_cache, T *mha_output,
     const int batch_size, const int head_num,
     const int kv_head_num, const int max_seq_len,
@@ -299,8 +299,8 @@ __global__ void masked_MHA_kernel(T* q, T *k, T *v,
 }
 
 template<>
-__global__ void masked_MHA_kernel(half* q, half* k, half* v,
-	half* qkv_bias, half* k_cache, half* v_cache, half* mha_output,
+__global__ void masked_MHA_kernel(half *q, half *k, half *v,
+	half *qkv_bias, half *k_cache, half *v_cache, half *mha_output,
 	const int batch_size, const int head_num, const int kv_head_num,
 	const int max_seq_len, const int head_size, const int step,
 	int rotary_embedding_dim, float rotary_embedding_base) { 

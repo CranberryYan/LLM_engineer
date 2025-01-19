@@ -19,7 +19,7 @@ int main() {
     const int BlockPerBeam = 8;
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
     const int probs_size = batch_size * vocab_size * beamwidth;
-    float* h_probs;
+    float *h_probs;
     float *d_probs;
     h_probs = (float*)malloc(sizeof(float) * probs_size);
     cudaMalloc((void**)&d_probs, sizeof(float) * probs_size);
@@ -35,12 +35,12 @@ int main() {
     float *d_tmp_topk_vals;
     cudaMalloc((void**)&d_tmp_topk_vals, sizeof(float) * topK_val_buf_size);
 
-    int* h_final_topk_ids;
+    int *h_final_topk_ids;
     int *d_final_topk_ids;
     h_final_topk_ids = (int*)malloc(sizeof(int) * final_topK_val_buf_size);
     cudaMalloc((void**)&d_final_topk_ids, sizeof(int) * final_topK_val_buf_size);
 
-    float* h_final_topk_vals;
+    float *h_final_topk_vals;
     float *d_final_topk_vals;
     h_final_topk_vals = (float*)malloc(sizeof(float) * final_topK_val_buf_size);
     cudaMalloc((void**)&d_final_topk_vals, sizeof(float) * final_topK_val_buf_size);

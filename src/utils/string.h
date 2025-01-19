@@ -41,7 +41,7 @@ inline std::string vec2str(std::vector<T> vec)
 }
 
 template<typename T>
-inline std::string arr2str(T* arr, size_t size)
+inline std::string arr2str(T *arr, size_t size)
 {
     std::stringstream ss;
     ss << "(";

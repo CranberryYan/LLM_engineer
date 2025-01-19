@@ -30,8 +30,8 @@ do                                                    \
     }                                                 \
 } while (0)
 
-void CPUfusedresidandRMSNorm(float* h_decoder_out, 
-                                    float* h_scale, float eps, int hidden_units, int num_tokens) {
+void CPUfusedresidandRMSNorm(float *h_decoder_out, 
+                                    float *h_scale, float eps, int hidden_units, int num_tokens) {
     for(int b = 0; b < num_tokens; b++) {
         float inv_fenmu = 0.0f;
         float mean = 0.0f;
@@ -51,7 +51,7 @@ void CPUfusedresidandRMSNorm(float* h_decoder_out,
 }
 
 template<typename T>
-bool CheckResult(float* CPUoutput, T* GPUoutput, int output_size) {
+bool CheckResult(float *CPUoutput, T *GPUoutput, int output_size) {
     float fp32GPUoutput = 0.0f;
     for(int i = 0; i < output_size; i++) {
         fp32GPUoutput = (float)GPUoutput[i];
@@ -74,19 +74,19 @@ int main(int argc, char *argv[]) {
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
     // first param = true or 1, we go fp32
     if (argv[1]) {
-        half* h_decoder_out = (half*) malloc(sizeof(half) * total_size);
-        half* decoder_out = (half*) malloc(sizeof(half) * total_size);
-        half* d_decoder_out;
+        half *h_decoder_out = (half*) malloc(sizeof(half) * total_size);
+        half *decoder_out = (half*) malloc(sizeof(half) * total_size);
+        half *d_decoder_out;
         cudaMalloc((void**)&d_decoder_out, sizeof(half) * total_size);
         for(int i = 0; i < total_size; i++) { 
             h_decoder_out[i] = 1.0f;
         }
         // to save residual used by fusedResidualAndRmsnorm
-        half* d_decoder_rsd;
+        half *d_decoder_rsd;
         cudaMalloc((void**)&d_decoder_rsd, sizeof(half) * total_size);
         //rmsnorm weights
-        half* h_scale = (half*) malloc(sizeof(half) * hidden_units);
-        half* d_scale;
+        half *h_scale = (half*) malloc(sizeof(half) * hidden_units);
+        half *d_scale;
         cudaMalloc((void**)&d_scale, sizeof(half) * hidden_units);
         for(int i = 0; i < hidden_units; i++) { 
             h_scale[i] = (half)1;
@@ -118,11 +118,11 @@ int main(int argc, char *argv[]) {
         // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
         CHECK(cudaMemcpy(decoder_out, d_decoder_out, sizeof(half) * total_size, cudaMemcpyDeviceToHost));
         
-        float* CPUout = (float*) malloc(sizeof(float) * total_size);
+        float *CPUout = (float*) malloc(sizeof(float) * total_size);
         for(int i = 0; i < total_size; i++){
             CPUout[i] = 1.0f;
         }
-        float* cpu_scale = (float*) malloc(sizeof(float) * hidden_units);
+        float *cpu_scale = (float*) malloc(sizeof(float) * hidden_units);
         for(int i = 0; i < hidden_units; i++) { 
             cpu_scale[i] = (float)1;
         }
@@ -138,19 +138,19 @@ int main(int argc, char *argv[]) {
         cudaFree(d_decoder_out);
         cudaFree(d_scale);
     } else {
-        float* h_decoder_out = (float*) malloc(sizeof(float) * total_size);
-        float* decoder_out = (float*) malloc(sizeof(float) * total_size);
-        float* d_decoder_out;
+        float *h_decoder_out = (float*) malloc(sizeof(float) * total_size);
+        float *decoder_out = (float*) malloc(sizeof(float) * total_size);
+        float *d_decoder_out;
         cudaMalloc((void**)&d_decoder_out, sizeof(float) * total_size);
         for(int i = 0; i < total_size; i++) { 
             h_decoder_out[i] = (float)(i % 2 + 1);
         }
         // to save residual used by fusedResidualAndRmsnorm
-        float* d_decoder_rsd;
+        float *d_decoder_rsd;
         cudaMalloc((void**)&d_decoder_rsd, sizeof(float) * total_size);
         //rmsnorm weights
-        float* h_scale = (float*) malloc(sizeof(float) * hidden_units);
-        float* d_scale;
+        float *h_scale = (float*) malloc(sizeof(float) * hidden_units);
+        float *d_scale;
         cudaMalloc((void**)&d_scale, sizeof(float) * hidden_units);
         for(int i = 0; i < hidden_units; i++) { 
             h_scale[i] = (float)(i % 2 + 1);
@@ -182,11 +182,11 @@ int main(int argc, char *argv[]) {
         // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
         CHECK(cudaMemcpy(decoder_out, d_decoder_out, sizeof(float) * total_size, cudaMemcpyDeviceToHost));
         // 以下float不用被half替换
-        float* CPUout = (float*) malloc(sizeof(float) * total_size);
+        float *CPUout = (float*) malloc(sizeof(float) * total_size);
         for(int i = 0; i < total_size; i++){
             CPUout[i] = (float)(i % 2 + 1);
         }
-        float* cpu_scale = (float*) malloc(sizeof(float) * hidden_units);
+        float *cpu_scale = (float*) malloc(sizeof(float) * hidden_units);
         for(int i = 0; i < hidden_units; i++) { 
             cpu_scale[i] = (float)(i % 2 + 1);
         }

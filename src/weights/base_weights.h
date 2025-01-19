@@ -32,6 +32,6 @@ template<typename T>
 struct BaseWeight {
     WeightType wtype;
     std::vector<int> shape;
-    T* data;
-    T* bias;
+    T *data;
+    T *bias;
 };

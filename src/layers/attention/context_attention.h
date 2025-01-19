@@ -12,8 +12,7 @@
 #include "src/kernels/fused_transpose_and_remv_pad.h"
 
 template<typename T>
-class LLaMaContextAttentionLayer
-{
+class LLaMaContextAttentionLayer {
 public:
 	LLaMaContextAttentionLayer(int head_num, int kv_head_size, int head_size,
 		LLaMaAttentionStaticParams attn_params, cudaStream_t stream,

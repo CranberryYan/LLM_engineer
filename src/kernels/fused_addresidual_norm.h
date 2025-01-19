@@ -12,5 +12,5 @@
 template<typename T>
 void launchFusedAddBiasResidualRMSNorm(
     TensorWrapper<T> *residual, TensorWrapper<T> *decoder_in, // [num tokens, hidden_units]
-    BaseWeight<T> &norm, T* scale,                            //RMSNorm weights
+    BaseWeight<T> &norm, T *scale,                            //RMSNorm weights
     float eps);
