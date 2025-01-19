@@ -140,7 +140,7 @@ void LLamaContextDecoder<T>::forward(TensorMap &inputs,
     // void launchRMSNorm(TensorWrapper<T> *decoder_in,
     // 	TensorWrapper<T> *decoder_residual,
     // 	LayerNormWeight<T> &attn_norm_weight, float eps)
-    launchRMSNorm(decoder_input->as<T>(), decoder_context->as<T>(),
+    launchRMSNorm(decoder_input->as<T>(), decoder_residual,
       layerWeights[layer_id_]->attn_norm_weight, rmsnorm_eps);
     DeviceSyncAndCheckCudaError();
 

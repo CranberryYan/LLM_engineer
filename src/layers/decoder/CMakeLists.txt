@@ -14,14 +14,14 @@ target_link_libraries(LlamaCtxdecoder PUBLIC
                                         add_residual
 )
 
-# add_library(Llamaselfdecoder STATIC self_decoder.cpp)
-# set_property(TARGET Llamaselfdecoder PROPERTY POSITION_INDEPENDENT_CODE  ON)
-# set_property(TARGET Llamaselfdecoder PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
-# target_link_libraries(Llamaselfdecoder PUBLIC
-#                                         LlamaselfAttn
-#                                         Llamaffn 
-#                                         llamaweights
-#                                         rmsnorm
-#                                         fused_addresidual_norm
-#                                         add_residual
-# )
+add_library(Llamaselfdecoder STATIC self_decoder.cpp)
+set_property(TARGET Llamaselfdecoder PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET Llamaselfdecoder PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+target_link_libraries(Llamaselfdecoder PUBLIC
+                                        LlamaselfAttn
+                                        Llamaffn 
+                                        llamaweights
+                                        rmsnorm
+                                        fused_addresidual_norm
+                                        add_residual
+)
