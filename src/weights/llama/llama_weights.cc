@@ -23,9 +23,10 @@
 #include "src/weights/llama/llama_weights.h"
 
 template<typename T>
-LlamaWeight<T>::LlamaWeight(int head_num, int kv_head_num, int inter_size,
-  int vocab_size, int num_layer, bool attn_bias, WeightType weight_type) :
-  hidden_units(head_num * head_size), inter_szie(inter_size),
+LlamaWeight<T>::LlamaWeight(int head_num, int kv_head_num, int head_size,
+    int inter_size, int vocab_size, int num_layer, bool attn_bias,
+    WeightType weight_type) :
+  hidden_units(head_num * head_size), inter_size(inter_size),
   vocab_size(vocab_size), num_layer(num_layer), weight_type(weight_type) {
   llama_layer_weight.reserve(num_layer);
   for (int i = 0; i < num_layer; ++i) {
