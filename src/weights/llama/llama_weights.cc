@@ -84,5 +84,3 @@ void LlamaWeight<T>::loadWeights(std::string weight_path) {
     {(size_t)vocab_size, (size_t)hidden_units},
     weight_path + "lm_head.weight.bin");
 }
-
-
