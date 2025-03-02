@@ -7,7 +7,6 @@
 #include "src/utils/tensor.h"
 #include "src/utils/vectorize_utils.h"
 
-
 // residual.shape = [num tokens, hidden_units]
 template<typename T>
 void launchFusedAddBiasResidualRMSNorm(

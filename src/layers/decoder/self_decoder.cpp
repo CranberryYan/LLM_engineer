@@ -21,7 +21,7 @@ void LlamaSelfDecoder<T>::freeBuf() {
 // 与context_decoder相比, 没有paddingoffset, causelmasks
 template <typename T>
 void LlamaSelfDecoder<T>::forward(TensorMap &input_tensors,
-    const std::vector<LLaMALayerWeight<T> *> &layerWeights,
+    const std::vector<LlamaLayerWeight<T> *> &layerWeights,
     TensorMap &output_tensors, LLaMaAttentionDynParams &dyn_params) {
     allocForForward(dyn_params);
     Tensor* decoder_input = input_tensors["decoder_input"];
@@ -102,3 +102,4 @@ void LlamaSelfDecoder<T>::forward(TensorMap &input_tensors,
 }
 
 template class LlamaSelfDecoder<float>;
+template class LlamaSelfDecoder<half>;

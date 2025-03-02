@@ -69,166 +69,122 @@ __device__ T blockReduceSum(T val) {
 	return sum;
 }
 
-template<typename T>
-__global__ void RMSNorm(
-	T* decoder_in,  // input & output: [num_tokens, hidden_units]
-	T* scale,       // intput: [hidden_units], RMSNorm weights
-	float eps,      // RMSNorm: 防止0作被除数
-	int num_tokens,
-	int hidden_units) {
-}
-
-template<>
-__global__ void RMSNorm(float *decoder_in, float *scale,
-	float eps, int num_tokens, int hidden_units) {
-	int vec_size = Vec<float>::size; // size: static, 无需将类实例化, 可以调用
-	using Vec_t = typename Vec<float>::Type;
-
-	// 每个block负责一行, 每一行有hidden_units个元素
-	// dout: 每一行的第一个元素
-	Vec_t* dout = reinterpret_cast<Vec_t*>
-		(decoder_in + blockIdx.x * hidden_units);
-	float thread_sum = 0.0f;
-	for (int idx = threadIdx.x; idx < hidden_units / vec_size;
-		idx += blockDim.x) {
-		// 向量化, idx每次加1, 但是因为dout是float4 or half2,
-		//	因此地址会默认每次加 4 or 2
-		Vec_t vec = dout[idx];
-		thread_sum += vec.x * vec.x;
-		thread_sum += vec.y * vec.y; 
-		thread_sum += vec.z * vec.z; 
-		thread_sum += vec.w * vec.w; 
-	}
-	thread_sum = blockReduceSum<float>(thread_sum);
-
-	__shared__ float inv_mean;
-	if (threadIdx.x == 0) {
-		inv_mean = rsqrtf(thread_sum / hidden_units + eps);
-	}
-	__syncthreads();
-
-	Vec_t* s = reinterpret_cast<Vec_t*>(scale);
-	for (int idx = threadIdx.x; idx < hidden_units / vec_size;
-		idx += blockDim.x) {
-		Vec_t vec = dout[idx];
-		dout[idx].x = vec.x * inv_mean * s[idx].x;
-		dout[idx].y = vec.y * inv_mean * s[idx].y;
-		dout[idx].z = vec.z * inv_mean * s[idx].z;
-		dout[idx].w = vec.w * inv_mean * s[idx].w;
-	}
-}
-
-template<>
-__global__ void RMSNorm(half *decoder_in, half *scale,
-    float eps, int num_tokens, int hidden_units) {
-	int vec_size = Vec<half>::size; // size: static, 无需将类实例化, 可以调用
-	using Vec_t = typename Vec<half>::Type;
-
-	// 每个block负责一行, 每一行有hidden_units个元素
-	// dout: 每一行的第一个元素
-	Vec_t* dout = reinterpret_cast<Vec_t*>
-		(decoder_in + blockIdx.x * hidden_units);
-	float thread_sum = 0.0f;
-	for (int idx = threadIdx.x; idx < hidden_units / vec_size;
-		idx += blockDim.x) {
-		// 向量化, idx每次加1, 但是因为dout是float4 or half2, 
-		//	因此地址会默认每次加 4 or 2
-		Vec_t vec = dout[idx];
-		thread_sum += __half2float(vec.x) * __half2float(vec.x);
-		thread_sum += __half2float(vec.y) * __half2float(vec.y);
-	}
-	thread_sum = blockReduceSum<half>(thread_sum);
-
-	__shared__ float inv_mean;
-	if (threadIdx.x == 0) {
-		inv_mean = rsqrtf(thread_sum / hidden_units + eps);
-	}
-	__syncthreads();
-
-	Vec_t* s = reinterpret_cast<Vec_t*>(scale);
-	for (int idx = threadIdx.x; idx < hidden_units / vec_size; idx += blockDim.x) {
-		Vec_t vec = dout[idx];
-		dout[idx].x = __float2half(__half2float(vec.x) * inv_mean * __half2float(s[idx].x));
-		dout[idx].y = __float2half(__half2float(vec.y) * inv_mean * __half2float(s[idx].y));
-	}
-}
-
-__global__ void RMSNorm(float *decoder_in, float *decoder_resiual,
-	float *scale, float eps, int num_tokens, int hidden_units) {
-	int vec_size = Vec<float>::size; // size: static, 无需将类实例化, 可以调用
-	using Vec_t = typename Vec<float>::Type;
-
-	// 每个block负责一行, 每一行有hidden_units个元素
-	// dout: 每一行的第一个元素
-	Vec_t* dout = reinterpret_cast<Vec_t*>
-		(decoder_in + blockIdx.x * hidden_units);
-	Vec_t* rsd = reinterpret_cast<Vec_t*>
-		(decoder_resiual + blockIdx.x * hidden_units);
-	float thread_sum = 0.0f;
-	for (int idx = threadIdx.x; idx < hidden_units / vec_size;
-		idx += blockDim.x) {
-		// 向量化, idx每次加1, 但是因为dout是float4 or half2,
-		//	因此地址会默认每次加 4 or 2
-		Vec_t vec = dout[idx];
-		rsd[idx] = vec;
-		thread_sum += vec.x * vec.x;
-		thread_sum += vec.y * vec.y; 
-		thread_sum += vec.z * vec.z; 
-		thread_sum += vec.w * vec.w; 
-	}
-	thread_sum = blockReduceSum<float>(thread_sum);
-
-	__shared__ float inv_mean;
-	if (threadIdx.x == 0) {
-		inv_mean = rsqrtf(thread_sum / hidden_units + eps);
-	}
-	__syncthreads();
-
-	Vec_t* s = reinterpret_cast<Vec_t*>(scale);
-	for (int idx = threadIdx.x; idx < hidden_units / vec_size;
-		idx += blockDim.x) {
-		Vec_t vec = dout[idx];
-		dout[idx].x = vec.x * inv_mean * s[idx].x;
-		dout[idx].y = vec.y * inv_mean * s[idx].y;
-		dout[idx].z = vec.z * inv_mean * s[idx].z;
-		dout[idx].w = vec.w * inv_mean * s[idx].w;
-	}
-}
-
-// input: [num_tokens, hidden_units]
-template<typename T>
-void launchRMSNorm(TensorWrapper<T> *decoder_in,
-	LayerNormWeight<T> &attn_norm_weight, float eps) {
-	int num_tokens = decoder_in->shape[0];
-	int hidden_units = decoder_in->shape[1];
-	// 向量化的读取, 一个thread负责4个数据, 最大为1024
-	int num_thread = std::min<int>(hidden_units / 4, 1024);
-	dim3 grid(num_tokens);
-	dim3 block(num_thread);
-	RMSNorm<T><<<grid, block>>>(decoder_in->data,
-		attn_norm_weight.gamma, eps, num_tokens, hidden_units);
-}
-
 template <typename T>
-void launchRMSNorm(TensorWrapper<T> *decoder_in,
-	TensorWrapper<T> *decoder_residual,
-	LayerNormWeight<T> &attn_norm_weight, float eps) {
-	int num_tokens = decoder_in->shape[0];
-	int hidden_units = decoder_in->shape[1];
-	// 向量化的读取, 一个thread负责4个数据, 最大为1024
-	int num_thread = std::min<int>(hidden_units / 4, 1024);
-	dim3 grid(num_tokens);
-	dim3 block(num_thread);
-	RMSNorm<<<grid, block>>>(decoder_in->data, decoder_residual->data,
-		attn_norm_weight.gamma, eps, num_tokens, hidden_units);
+__global__ void RMSNorm(T* decoder_out, // [num tokens, q_hidden_units]
+                        T* decoder_residual,
+                        T* scale, //[q_hidden_units], RMSNorm weights
+                        float eps, //RMSNorm eps
+                        int num_tokens, 
+                        int hidden_units) {
+  int vec_size = Vec<T>::size;
+  using Vec_t = typename Vec<T>::Type;
+  float thread_sum = 0.0f;
+  Vec_t* dout = reinterpret_cast<Vec_t*>(decoder_out + blockIdx.x * hidden_units);
+  Vec_t* rsd;
+  rsd = reinterpret_cast<Vec_t*>(decoder_residual + blockIdx.x * hidden_units);
+  for (int idx = threadIdx.x; idx < hidden_units / vec_size; idx += blockDim.x) {
+    Vec_t vec = dout[idx];
+    rsd[idx] = vec;
+    thread_sum += vec.x * vec.x;
+    thread_sum += vec.y * vec.y;
+    thread_sum += vec.z * vec.z;
+    thread_sum += vec.w * vec.w;
+  }
+  thread_sum = blockReduceSum<float>(thread_sum);
+  __shared__ float inv_mean;
+  if (threadIdx.x == 0) {
+    inv_mean = rsqrtf((float)thread_sum / hidden_units + eps);
+  }
+  __syncthreads();
+  Vec_t* s = reinterpret_cast<Vec_t*>(scale);
+  for (int idx = threadIdx.x; idx < hidden_units / vec_size; idx += blockDim.x) {
+    Vec_t out = dout[idx];// note the offset should divide vec size
+
+    dout[idx].x = out.x * inv_mean * s[idx].x;
+    dout[idx].y = out.y * inv_mean * s[idx].y;
+    dout[idx].z = out.z * inv_mean * s[idx].z;
+    dout[idx].w = out.w * inv_mean * s[idx].w;
+  }
 }
 
-template void launchRMSNorm(TensorWrapper<float>* decoder_in,
-	LayerNormWeight<float> &attn_norm_weight, float eps);
+template <>
+__global__ void RMSNorm(half* decoder_out, // [num tokens, q_hidden_units]
+                        half* decoder_residual,
+                        half* scale, //[q_hidden_units], RMSNorm weights
+                        float eps, //RMSNorm eps
+                        int num_tokens, 
+                        int hidden_units){
+    int vec_size = Vec<half>::size;
+    using Vec_t = typename Vec<half>::Type;
+    int batch_id = blockIdx.x;
+    int tid = threadIdx.x;
+    Vec_t* s; 
+    Vec_t* dout = reinterpret_cast<Vec_t*>(decoder_out + batch_id * hidden_units);
+    Vec_t* rsd;
+    if (decoder_residual != nullptr) {
+        rsd = reinterpret_cast<Vec_t*>(decoder_residual + batch_id * hidden_units);
+    }
+    float thread_accm = 0.0f;
+    for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
+        Vec_t out = dout[i];// note the offset should divide vec size
+        if (decoder_residual != nullptr) {
+            rsd[i] = out;
+        }
+        thread_accm += __half2float(out.x) * __half2float(out.x);
+        thread_accm += __half2float(out.y) * __half2float(out.y);
+    } //x^2
+    
+    // mean(x^2)
+    float blocksum = blockReduceSum<float>(thread_accm);
+    __shared__ float inv_fenmu;
+    if(tid == 0){
+        inv_fenmu = rsqrtf(float(blocksum / hidden_units) + eps);
+    }
+    __syncthreads();
+    // rmsnorm
+    s = reinterpret_cast<Vec_t*>(scale);
+    for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
+        Vec_t dout_h2 =dout[i];
+        dout[i].x = s[i].x * __float2half(__half2float(dout_h2.x) * inv_fenmu);
+        dout[i].y = s[i].y * __float2half(__half2float(dout_h2.y) * inv_fenmu);
+    }    
+}
 
-template void launchRMSNorm(TensorWrapper<float> *decoder_in,
-	TensorWrapper<float> *decoder_residual,
-	LayerNormWeight<float> &attn_norm_weight, float eps);
 
-template void launchRMSNorm(TensorWrapper<half> *decoder_in,
-	LayerNormWeight<half> &attn_norm_weight, float eps);               
+template<typename T>
+void launchRMSNorm( TensorWrapper<T>* decoder_out, // [num tokens, hidden_units]
+                    TensorWrapper<T>* decoder_residual,
+                    LayerNormWeight<T>& attn_norm_weight, //RMSNorm weights
+                    float eps, //RMSNorm eps
+                    bool is_last // for print last rmsnorm output to debug
+                    ) {
+	int num_tokens = decoder_out->shape[0];
+	int hidden_units = decoder_out->shape[1];
+	int vec_size = Vec<T>::size;
+	int num_threads = hidden_units / 4; //vec size // assume head size can be divided by 4 and 2
+	T* rsd = decoder_residual->data;
+	dim3 grid(num_tokens);
+	dim3 block(num_threads);
+	RMSNorm<T><<<grid, block>>>(decoder_out->data,
+													rsd,
+													attn_norm_weight.gamma,
+													eps,
+													num_tokens,
+													hidden_units);
+#ifdef PRINT_DATA
+	print_data<<<1, 1>>>(decoder_out->data);
+#else
+#endif
+}
+
+template void launchRMSNorm( TensorWrapper<float>* decoder_out, // [num tokens, hidden_units]
+									TensorWrapper<float>* decoder_residual,
+									LayerNormWeight<float>& attn_norm_weight, //RMSNorm weights
+									float eps, //RMSNorm eps
+									bool is_last);
+
+template void launchRMSNorm( TensorWrapper<half>* decoder_out, // [num tokens, hidden_units]
+                    TensorWrapper<half>* decoder_residual,
+                    LayerNormWeight<half>& attn_norm_weight, //RMSNorm weights
+                    float eps, //RMSNorm eps
+                    bool is_last);

@@ -38,7 +38,7 @@ public:
   void allocForForward(LLaMaAttentionDynParams &dyn_params);
   void freeBuf();
   void forward(TensorMap &inputs,
-    const std::vector<LLaMALayerWeight<T>*> &layerWeights,
+    const std::vector<LlamaLayerWeight<T>*> &layerWeights,
     TensorMap &output, LLaMaAttentionDynParams& dyn_params);
 
 private:

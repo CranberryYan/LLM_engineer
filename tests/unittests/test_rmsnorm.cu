@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
         scale.gamma = d_scale;
         // debug info, better to retain: 
         std::cout << "before launch kernel" << std::endl;
-        launchRMSNorm(decoder_out_tensor, scale, eps);
+        launchRMSNorm(decoder_out_tensor, decoder_rsd, scale, eps);
         // debug info, better to retain: 
         std::cout << "after launch kernel" << std::endl;
         // debug info, better to retain: 
@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
         scale.gamma = d_scale;
         // debug info, better to retain: 
         std::cout << "before launch kernel" << std::endl;
-        launchRMSNorm(decoder_out_tensor, scale, eps);
+        launchRMSNorm(decoder_out_tensor, decoder_rsd, scale, eps);
         // debug info, better to retain: 
         std::cout << "after launch kernel" << std::endl;
         // debug info, better to retain: 

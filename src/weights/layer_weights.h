@@ -5,16 +5,16 @@
 #include "src/weights/llama/attention_weights.h"
 
 template<typename T>
-class LLaMALayerWeight {
+class LlamaLayerWeight {
 public:
-  LLaMALayerWeight() = delete;
-  LLaMALayerWeight(int head_num,
+  LlamaLayerWeight() = delete;
+  LlamaLayerWeight(int head_num,
                   int  kv_head_num,
                   int  head_size,
                   int  inter_size,
                   WeightType weight_type,
                   bool attn_bias);
-  ~LLaMALayerWeight();
+  ~LlamaLayerWeight();
 public:
   void loadWeights();
   void loadWeights(std::string weight_path, WeightType weight_type);

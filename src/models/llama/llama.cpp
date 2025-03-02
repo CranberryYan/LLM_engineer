@@ -448,3 +448,6 @@ std::string Llama<T>::Response(const std::vector<std::string> &input,
   PrintRes(-1, retString.c_str());
   return retString;
 }
+
+template class Llama<float>;
+template class Llama<half>;

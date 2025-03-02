@@ -19,7 +19,7 @@ int main(){
     int hidden_units = (head_num + 2 * kv_head_num) * head_size;
     int q_hidden_units = head_num * head_size;
     float rmsnorm_eps = 1e-6;
-    LLaMAAttentionStaticParams attn_static_params;
+    LLaMaAttentionStaticParams attn_static_params;
     attn_static_params.rotary_embedding_dim = 128;
     attn_static_params.rotary_embedding_base = 10000;
     attn_static_params.max_position_embeddings = 2048;

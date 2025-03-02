@@ -278,3 +278,4 @@ TensorWrapper<float>* all_k_cache = new TensorWrapper<float>(GPU,
 }
 
 template class LLaMaContextAttentionLayer<float>;
+template class LLaMaContextAttentionLayer<half>;

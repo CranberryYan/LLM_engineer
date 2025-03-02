@@ -119,3 +119,4 @@ void LLaMaFFNLayer<T>::forward(TensorMap& inputs, TensorMap& outputs,
 };
 
 template class LLaMaFFNLayer<float>;
+template class LLaMaFFNLayer<half>;

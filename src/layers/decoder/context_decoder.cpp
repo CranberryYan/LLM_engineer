@@ -70,7 +70,7 @@ void LlamaContextDecoder<T>::freeBuf() {
 
 template <typename T>
 void LlamaContextDecoder<T>::forward(TensorMap &inputs,
-  const std::vector<LLaMALayerWeight<T>*> &layerWeights,
+  const std::vector<LlamaLayerWeight<T>*> &layerWeights,
   TensorMap &output, LLaMaAttentionDynParams& dyn_params) {
   allocForForward(dyn_params);
   Tensor* seq_lens = inputs["input_length"];
@@ -176,3 +176,6 @@ void LlamaContextDecoder<T>::forward(TensorMap &inputs,
   freeBuf();
   DeviceSyncAndCheckCudaError();
 }
+
+template class LlamaContextDecoder<float>;
+template class LlamaContextDecoder<half>;

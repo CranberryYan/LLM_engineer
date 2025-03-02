@@ -69,7 +69,16 @@
         "__split_buffer": "cpp",
         "__node_handle": "cpp",
         "queue": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "__bit_reference": "cpp",
+        "__config": "cpp",
+        "__functional_03": "cpp",
+        "__locale": "cpp",
+        "__threading_support": "cpp",
+        "ios": "cpp",
+        "locale": "cpp",
+        "__debug": "cpp",
+        "__mutex_base": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

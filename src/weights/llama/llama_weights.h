@@ -10,7 +10,7 @@
 template<typename T>
 struct LlamaWeight : public Weight {
 public:
-  std::vector<LLaMALayerWeight<T>*> llama_layer_weight;
+  std::vector<LlamaLayerWeight<T>*> llama_layer_weight;
   LayerNormWeight<T> out_rmsnorm_weight;
   EmbeddingWeight<T> pre_decoder_embedding_weight;
   EmbeddingWeight<T> post_decoder_embedding_weight;

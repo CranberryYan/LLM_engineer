@@ -18,6 +18,25 @@ __global__ void AddResidual(T *residual, T *decoder_out,
     }
 }
 
+template <>
+__global__ void AddResidual( // residual.shape = [num tokens, hidden_units], batch_size = num tokens, n_dims = hidden_units
+    half *residual,
+    half *decoder_out, // [num tokens, hidden_units]
+    int num_tokens,
+    int hidden_units)
+{
+    int vec_size = Vec<half>::size;
+    using Vec_t = typename Vec<half>::Type;
+    int batch_id = blockIdx.x;
+    int tid = threadIdx.x;
+    Vec_t *dout = reinterpret_cast<Vec_t *>(decoder_out + batch_id * hidden_units);
+    Vec_t *rsd = reinterpret_cast<Vec_t *>(residual + batch_id * hidden_units);
+    for (int i = tid; i < hidden_units / vec_size; i += blockDim.x)
+    {
+        dout[i] = __hadd2(dout[i], rsd[i]);
+    } // addresidual
+}
+
 /*
 在context_decoder阶段: num_tokens   在self_decoder阶段: batch_size
 1. context_decoder 阶段：num_tokens -> 全量推理, 输入是整个句子, 帮助模型建立对输入的理解, 生成输出时, 利用先前的上下文信息
@@ -50,7 +69,13 @@ void launchAddResidual(             // 在context_decoder阶段: num_tokens   �
         num_tokens, hidden_units);
 
 }
+
 template void launchAddResidual(
     TensorWrapper<float> *residual,
     TensorWrapper<float> *decoder_out,
+    bool is_print);
+
+template void launchAddResidual(
+    TensorWrapper<half> *residual,
+    TensorWrapper<half> *decoder_out,
     bool is_print);

@@ -12,7 +12,7 @@
 #include "src/weights/llama/layer_weights.h"
 
 template <typename T>
-LLaMALayerWeight<T>::LLaMALayerWeight(
+LlamaLayerWeight<T>::LlamaLayerWeight(
   int head_num, int kv_head_num, int head_size,
   int inter_size, WeightType weight_type,
   bool attn_bias) {
@@ -50,7 +50,7 @@ LLaMALayerWeight<T>::LLaMALayerWeight(
 
 // load weights from HF model file
 template <typename T>
-void LLaMALayerWeight<T>::loadWeights(std::string weight_path,
+void LlamaLayerWeight<T>::loadWeights(std::string weight_path,
   WeightType weight_type) {
   // 1. RMSNorm
   loadWeightFromBin<T, float>::internalFunc(attn_norm_weight.gamma,
@@ -89,7 +89,7 @@ void LLaMALayerWeight<T>::loadWeights(std::string weight_path,
 // load weights from our self_defined dummy weights,
 //  used to test preformance
 template <typename T>
-void LLaMALayerWeight<T>::loadWeights() {
+void LlamaLayerWeight<T>::loadWeights() {
   T *d_dummy_attn_norm_weight;
   T *d_dummy_ffn_norm_weight;
   T *d_dummy_qkv_weights;
@@ -206,7 +206,7 @@ void freeWeights(BaseWeight<T> &weights) {
 }
 
 template <typename T>
-LLaMALayerWeight<T>::~LLaMALayerWeight() {
+LlamaLayerWeight<T>::~LlamaLayerWeight() {
   // free norm
   GPUFree(attn_norm_weight.gamma);
   GPUFree(ffn_norm_weight.gamma);
@@ -218,3 +218,6 @@ LLaMALayerWeight<T>::~LLaMALayerWeight() {
   freeWeights(ffn_weight.up);
   freeWeights(ffn_weight.down);
 }
+
+template class LlamaLayerWeight<float>;
+template class LlamaLayerWeight<half>;

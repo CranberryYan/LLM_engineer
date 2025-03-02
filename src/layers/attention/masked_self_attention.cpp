@@ -132,3 +132,4 @@ void LLaMaSelfAttentionLayer<T>::forward(
 }
 
 template class LLaMaSelfAttentionLayer<float>;
+template class LLaMaSelfAttentionLayer<half>;

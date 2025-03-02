@@ -244,12 +244,17 @@ template void launchAddFusedQKVBiasTransposeAndRoPE(
     TensorWrapper<float> *QKV, BaseWeight<float> &qkv,
     TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
     LLaMaAttentionStaticParams &params);
-// template void launchAddFusedQKVBiasTransposeAndRoPE(
-//             TensorWrapper<half> *q_buf, TensorWrapper<half> *k_buf, TensorWrapper<half> *v_buf,
-//             TensorWrapper<half> *QKV, BaseWeight<half> &qkv,
-//             TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
-//             LLaMaAttentionStaticParams &params);
+
+template void launchAddFusedQKVBiasTransposeAndRoPE(
+            TensorWrapper<half> *q_buf, TensorWrapper<half> *k_buf, TensorWrapper<half> *v_buf,
+            TensorWrapper<half> *QKV, BaseWeight<half> &qkv,
+            TensorWrapper<int> *padding_offset, TensorWrapper<int> *history_length, TensorWrapper<int> *input_length,
+            LLaMaAttentionStaticParams &params);
 
 template void launchRoPE(
     TensorWrapper<float>* qkv_buf, TensorWrapper<int>* step,
+    LLaMaAttentionStaticParams& static_params);
+
+template void launchRoPE(
+    TensorWrapper<half>* qkv_buf, TensorWrapper<int>* step,
     LLaMaAttentionStaticParams& static_params);

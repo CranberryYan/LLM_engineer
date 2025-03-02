@@ -14,14 +14,14 @@
 // 8. Down
 // 9. Lmhead(Linear)(同Embedding)
 template<typename T>
-class LLaMALayerWeight {
+class LlamaLayerWeight {
 public:
-  LLaMALayerWeight() = delete;
-  LLaMALayerWeight(int head_num,
+  LlamaLayerWeight() = delete;
+  LlamaLayerWeight(int head_num,
     int  kv_head_num, int  head_size,
     int  inter_size, WeightType weight_type,
     bool attn_bias);
-  ~LLaMALayerWeight();
+  ~LlamaLayerWeight();
 public:
   void loadWeights();
   void loadWeights(std::string weight_path, WeightType weight_type);
@@ -31,12 +31,12 @@ public:
   LLaMAFFNWeights<T> ffn_weight;
 
 private:
-  const int head_num;
-  const int kv_head_num;
-  const int head_size;
-  const int hidden_units;
-  const int inter_size;
-  const int bit_size;
-  const bool attn_bias;
+  int head_num;
+  int kv_head_num;
+  int head_size;
+  int hidden_units;
+  int inter_size;
+  int bit_size;
+  bool attn_bias;
   WeightType weight_type;
 };
