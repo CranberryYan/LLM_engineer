@@ -24,7 +24,7 @@
 #include "src/layers/decoder/context_decoder.h"
 
 template <typename T>
-void LLamaContextDecoder<T>::allocForForward(
+void LlamaContextDecoder<T>::allocForForward(
   LLaMaAttentionDynParams &dyn_params) {
   int num_tokens = dyn_params.num_tokens;
   int batch_size = dyn_params.batch_size;
@@ -59,7 +59,7 @@ void LLamaContextDecoder<T>::allocForForward(
 }
 
 template <typename T>
-void LLamaContextDecoder<T>::freeBuf() {
+void LlamaContextDecoder<T>::freeBuf() {
   allocator->Free(attention_mask->data);
   DeviceSyncAndCheckCudaError();
   allocator->Free(padding_offset->data);
@@ -69,7 +69,7 @@ void LLamaContextDecoder<T>::freeBuf() {
 }
 
 template <typename T>
-void LLamaContextDecoder<T>::forward(TensorMap &inputs,
+void LlamaContextDecoder<T>::forward(TensorMap &inputs,
   const std::vector<LLaMALayerWeight<T>*> &layerWeights,
   TensorMap &output, LLaMaAttentionDynParams& dyn_params) {
   allocForForward(dyn_params);

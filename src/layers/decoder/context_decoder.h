@@ -18,9 +18,9 @@
 #include "src/utils/tensor.h"
 
 template <typename T>
-class LLamaContextDecoder {
+class LlamaContextDecoder {
 public:
-  LLamaContextDecoder(int head_num,
+  LlamaContextDecoder(int head_num,
     int kv_head_num, int head_size,
     int inter_size, int num_layer,
     const LLaMaAttentionStaticParams &attn_params,

@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     int context_length_ = res.size();
     int history_length_ = 0;
     int cur_input_length = res.size(); // res.size() is the input ids len, which is the real input len, rather not len of input string
-    LLaMAAttentionDynParams attn_dyn_params;
+    LLaMaAttentionDynParams attn_dyn_params;
     attn_dyn_params.batch_size = 1;
     attn_dyn_params.num_tokens = cur_input_length;          
     attn_dyn_params.max_q_len = attn_dyn_params.num_tokens; // 指一个batch中的q的最大长度，因为此时不支持batch，所以就等于cur input len
